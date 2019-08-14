@@ -9,16 +9,22 @@ tags: golang bazel
 该文档主要介绍 Bazel 构建基本 golang 项目的案例, 主要了解在golang项目中如何使用bazel. 
 
 ## 概览
+
 ### 关键文件
+
 1. WORKSPACE 在项目根目录，主要用来设置加载bazel环境（包括rules等）以及其依赖。
 2. BUILD.bazel 存在于根目录以及源文件所在目录，用来标记源文件编译以及依赖情况，一般是自动生成。
+
 ### 工具
+
 1. rules_go golang的官方rules，定义golang编译逻辑。
 2. gazelle 用于生成golang build文件的工具。
 
 ## 项目构建
+
 ### 编辑WORKSPACE
-```
+
+```bash
 # 加载bazel标准库中的函数 http_archive
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # 调用http_archive下载rules_go
@@ -48,7 +54,8 @@ gazelle_dependencies()
 ```
 
 ### 编辑根目录下的BUILD.bazel
-```
+
+```bash
 # 加载gazelle
 load("@bazel_gazelle//:def.bzl", "gazelle")
 # gazelle:prefix [注意这句注释并非没有意义，中括号替换为该项目Name]
@@ -56,9 +63,11 @@ gazelle(name = "gazelle")
 ```
 
 ### 构建
+
 1. 使用gazelle生成build文件
 2. 使用生成的build文件构建项目代码
-```
+
+```bash
 # 使用gazelle自动生成build文件
 bazel run //:gazelle
  
@@ -70,4 +79,5 @@ bazel build //path/of/target:target_name
 ```
 
 ## Demo项目
+
 [Demo](https://github.com/yodark1995/multi-language-bazel-test)
