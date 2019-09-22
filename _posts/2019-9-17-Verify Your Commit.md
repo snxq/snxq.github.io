@@ -12,7 +12,7 @@ tags: git
 
 ## 生成 GPG 密钥
 
-1. 由于我使用的是 gpg 版本为 2.0.24，所以按照 github 的文档给的命令不合适，所以使用 `gpg --gen-key` 命令生成。
+由于我使用的是 gpg 版本为 2.0.24，所以按照 github 的文档给的命令不合适，所以使用 `gpg --gen-key` 命令生成。默认使用`gpg --full-generate-key`即可。
 
 如果在最后生成的过程中卡住，那么就需要安装 rng-tools 生成随机数的工具。卡住的原因是系统熵池的大小不够，可通过 `cat /proc/sys/kernel/random/entropy_avail` 查看，通过启动 rngd 来增大熵池。
 
@@ -40,8 +40,8 @@ gpg --armor --export [GPG 密钥 ID]
 ```bash
 # 将 GPG 密钥和 git 绑定
 git config --global user.signingkey [GPG 密钥 ID]
-# 设置 commit 默认加密
-git config commit.gpgsign true
+# 设置全局 commit 默认加密
+git config --global commit.gpgsign true
 ```
 
 ---
