@@ -1,4 +1,4 @@
-[少年乌托邦](https://snxq.github.io/)
+[少年乌托邦](https://blog.oliverchang.cn)
 
 ---
 
