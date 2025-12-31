@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, User, Github } from 'lucide-react'
+import { Github } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -61,16 +61,19 @@ const About = () => {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `[${year}-${month}-${day}]`
   }
 
   if (loading) {
     return (
       <div className="about-container">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat about.md
+        </div>
         <div className="loading">加载中...</div>
       </div>
     )
@@ -79,6 +82,9 @@ const About = () => {
   if (error) {
     return (
       <div className="about-container">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat about.md
+        </div>
         <div className="error">{error}</div>
       </div>
     )
@@ -87,6 +93,9 @@ const About = () => {
   if (!aboutContent) {
     return (
       <div className="about-container">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat about.md
+        </div>
         <div className="no-content">暂无关于我的内容</div>
       </div>
     )
@@ -94,20 +103,18 @@ const About = () => {
 
   return (
     <div className="about-container">
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat about.md
+      </div>
+      
       <article className="about-article">
         <header className="about-header">
           <h1 className="about-title">{aboutContent.title}</h1>
           <div className="about-meta">
             <div className="meta-item">
-              <Calendar size={16} />
-              <span>发布于 {formatDate(getDisplayDate(aboutContent))}</span>
+              <span>{formatDate(getDisplayDate(aboutContent))}</span>
             </div>
             <div className="meta-item">
-              <User size={16} />
-              <span>作者: {aboutContent.user.login}</span>
-            </div>
-            <div className="meta-item">
-              <Github size={16} />
               <a 
                 href={aboutContent.html_url} 
                 target="_blank" 
@@ -132,7 +139,7 @@ const About = () => {
                     style={{
                       maxWidth: '100%',
                       height: 'auto',
-                      borderRadius: '8px',
+                      border: '1px solid #30363d',
                       margin: '16px 0'
                     }}
                     loading="lazy"
@@ -144,9 +151,12 @@ const About = () => {
             </ReactMarkdown>
           </div>
         </div>
-        
-
       </article>
+      
+      <div className="separator">────────────────────────────────────────────────────────────</div>
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> <span className="cursor"></span>
+      </div>
     </div>
   )
 }

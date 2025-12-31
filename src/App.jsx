@@ -18,14 +18,18 @@ function App() {
     <GitHubProvider>
       <Router>
         <div className="app">
-          <Header />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<BlogList />} />
-              <Route path="/post/:issueNumber" element={<BlogPost />} />
-              <Route path="/about" element={<About />} />
-            </Routes>
-          </main>
+          <div className="terminal">
+            <Header />
+            <div className="terminal-body">
+              <main className="main-content">
+                <Routes>
+                  <Route path="/" element={<BlogList />} />
+                  <Route path="/post/:issueNumber" element={<BlogPost />} />
+                  <Route path="/about" element={<About />} />
+                </Routes>
+              </main>
+            </div>
+          </div>
         </div>
       </Router>
     </GitHubProvider>

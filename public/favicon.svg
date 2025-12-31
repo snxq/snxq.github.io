@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 终端窗口背景 -->
+  <rect width="64" height="64" fill="#0d1117" rx="3"/>
+  
+  <!-- 终端标题栏 -->
+  <rect width="64" height="14" fill="#161b22" rx="3 3 0 0"/>
+  
+  <!-- 三个点（红黄绿） -->
+  <circle cx="10" cy="7" r="3.5" fill="#ff5f56"/>
+  <circle cx="22" cy="7" r="3.5" fill="#ffbd2e"/>
+  <circle cx="34" cy="7" r="3.5" fill="#27c93f"/>
+  
+  <!-- 命令提示符符号 -->
+  <text x="14" y="38" font-family="monospace" font-size="14" font-weight="bold" fill="#00ff00">$</text>
+  
+  <!-- 终端光标（闪烁） -->
+  <rect x="28" y="30" width="3" height="14" fill="#00ff00">
+    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- 终端内容线（模拟命令输出） -->
+  <line x1="10" y1="48" x2="54" y2="48" stroke="#30363d" stroke-width="1.5"/>
+  <line x1="10" y1="56" x2="46" y2="56" stroke="#30363d" stroke-width="1.5"/>
+</svg>
