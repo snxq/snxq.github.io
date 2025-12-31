@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useGitHub } from '../context/GitHubContext'
-import { Calendar, User, ArrowLeft } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -67,18 +66,19 @@ const BlogPost = () => {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `[${year}-${month}-${day}]`
   }
 
   if (loading) {
     return (
       <div className="blog-post">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~/posts</span><span className="prompt-symbol">$</span> cat post.md
+        </div>
         <div className="loading">加载中...</div>
       </div>
     )
@@ -87,11 +87,13 @@ const BlogPost = () => {
   if (error) {
     return (
       <div className="blog-post">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~/posts</span><span className="prompt-symbol">$</span> cat post.md
+        </div>
         <div className="error">
           <p>{error}</p>
           <Link to="/" className="back-link">
-            <ArrowLeft size={16} />
-            返回首页
+            ← cd ..
           </Link>
         </div>
       </div>
@@ -101,11 +103,13 @@ const BlogPost = () => {
   if (!post) {
     return (
       <div className="blog-post">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~/posts</span><span className="prompt-symbol">$</span> cat post.md
+        </div>
         <div className="error">
           <p>文章不存在</p>
           <Link to="/" className="back-link">
-            <ArrowLeft size={16} />
-            返回首页
+            ← cd ..
           </Link>
         </div>
       </div>
@@ -114,28 +118,19 @@ const BlogPost = () => {
 
   return (
     <div className="blog-post">
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~/posts</span><span className="prompt-symbol">$</span> cat {post.number}.md
+      </div>
+      
       <div className="post-header">
         <Link to="/" className="back-link">
-          <ArrowLeft size={16} />
-          返回首页
+          ← cd ..
         </Link>
         
         <h1 className="post-title">{post.title}</h1>
         
         <div className="post-meta">
-          <div className="meta-item">
-            <img 
-              src={post.user.avatar_url} 
-              alt={post.user.login}
-              className="author-avatar"
-            />
-            <span>{post.user.login}</span>
-          </div>
-          <div className="meta-item">
-            <Calendar size={16} />
-            <span>{formatDate(getDisplayDate(post))}</span>
-          </div>
-
+          {formatDate(getDisplayDate(post))}
         </div>
         
         {post.labels.length > 0 && (
@@ -146,7 +141,6 @@ const BlogPost = () => {
                 <span 
                   key={label.id} 
                   className="label"
-                  style={{ backgroundColor: `#${label.color}` }}
                 >
                   {label.name}
                 </span>
@@ -167,7 +161,7 @@ const BlogPost = () => {
                 style={{
                   maxWidth: '100%',
                   height: 'auto',
-                  borderRadius: '8px',
+                  border: '1px solid #30363d',
                   margin: '16px 0'
                 }}
                 loading="lazy"
@@ -177,6 +171,11 @@ const BlogPost = () => {
         >
           {removeCustomDateFromContent(post.body) || '暂无内容'}
         </ReactMarkdown>
+      </div>
+      
+      <div className="separator">────────────────────────────────────────────────────────────</div>
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~/posts</span><span className="prompt-symbol">$</span> <span className="cursor"></span>
       </div>
     </div>
   )

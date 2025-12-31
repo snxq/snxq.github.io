@@ -4,14 +4,12 @@
 }
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  line-height: 1.5;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  line-height: 1.6;
   font-weight: 400;
   
-  color: #213547;
-  background-color: #f8fafc;
+  color: #c9d1d9;
+  background-color: #0d1117;
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -22,7 +20,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #0d1117;
 }
 
 #root {
@@ -31,19 +29,21 @@ body {
 
 /* 链接样式 */
 a {
-  color: #2563eb;
+  color: #58a6ff;
   text-decoration: none;
 }
 
 a:hover {
+  color: #79c0ff;
   text-decoration: underline;
 }
 
 /* 标题样式 */
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: normal;
+  line-height: 1.4;
+  color: #58a6ff;
 }
 
 /* 段落样式 */
@@ -63,7 +63,7 @@ button {
 }
 
 button:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #58a6ff;
   outline-offset: 2px;
 }
 
@@ -75,7 +75,7 @@ input, textarea {
 }
 
 input:focus, textarea:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #58a6ff;
   outline-offset: -2px;
 }
 
@@ -91,14 +91,14 @@ img {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #161b22;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #30363d;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: #484f58;
 }

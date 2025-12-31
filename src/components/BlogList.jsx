@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useGitHub } from '../context/GitHubContext'
-import { Calendar, User, Tag } from 'lucide-react'
 
 const BlogList = () => {
   const { getBlogPosts } = useGitHub()
@@ -49,11 +48,11 @@ const BlogList = () => {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `[${year}-${month}-${day}]`
   }
 
   const extractSummary = (body) => {
@@ -77,6 +76,9 @@ const BlogList = () => {
   if (loading) {
     return (
       <div className="blog-list">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat posts.txt
+        </div>
         <div className="loading">加载中...</div>
       </div>
     )
@@ -85,6 +87,9 @@ const BlogList = () => {
   if (error) {
     return (
       <div className="blog-list">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat posts.txt
+        </div>
         <div className="error">
           <p>{error}</p>
           <button onClick={loadPosts} className="retry-btn">
@@ -98,6 +103,9 @@ const BlogList = () => {
   if (posts.length === 0) {
     return (
       <div className="blog-list">
+        <div className="prompt">
+          <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat posts.txt
+        </div>
         <div className="empty">
           <h2>暂无文章</h2>
           <p>还没有发布任何博客文章。</p>
@@ -109,9 +117,10 @@ const BlogList = () => {
 
   return (
     <div className="blog-list">
-      <div className="posts-header">
-        <h2>最新文章</h2>
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> cat posts.txt
       </div>
+      <div className="separator">────────────────────────────────────────────────────────────</div>
       
       <div className="posts-list">
         {posts.map((post) => (
@@ -132,6 +141,11 @@ const BlogList = () => {
             </Link>
           </article>
         ))}
+      </div>
+      
+      <div className="separator">────────────────────────────────────────────────────────────</div>
+      <div className="prompt">
+        <span className="prompt-user">snxq@blog</span>:<span className="prompt-path">~</span><span className="prompt-symbol">$</span> <span className="cursor"></span>
       </div>
     </div>
   )
