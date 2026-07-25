@@ -1,0 +1,31 @@
+name: Content — Now
+description: Update the current state.
+title: "[now] "
+labels: ["content:now"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: BUILD
+      description: One value per line.
+  - type: textarea
+    id: learn
+    attributes:
+      label: LEARN
+      description: One value per line.
+  - type: textarea
+    id: read
+    attributes:
+      label: READ
+      description: One value per line.
+  - type: textarea
+    id: loop
+    attributes:
+      label: LOOP
+      description: One value per line.

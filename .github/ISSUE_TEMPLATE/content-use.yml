@@ -1,0 +1,22 @@
+name: Content — Use
+description: Add one item to the uses list.
+title: "[use] "
+labels: ["content:use"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Category
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Optional HTTPS URL.

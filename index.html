@@ -1,13 +1,63 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>博客</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#10100f">
+  <meta name="description" content="snxq / 晓琦的个人信号档案：项目、文章、笔记与生活。">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>snxq.cc — signal archive</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true">
+    <div class="grid-plane"></div>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="grain"></div>
+  </div>
+
+  <header class="site-mark" aria-label="网站标识">
+    <a href="#command-input" class="wordmark" aria-label="回到命令输入框">
+      <span class="wordmark-main">snxq</span><span class="wordmark-dot">.cc</span>
+    </a>
+    <p>personal signal archive</p>
+  </header>
+
+  <main class="shell">
+    <section class="intro" aria-labelledby="intro-title">
+      <div class="intro-index" aria-hidden="true">
+        <span>PERSONAL ARCHIVE</span>
+        <span>NO. 001</span>
+      </div>
+      <p class="eyebrow"><span class="pulse-dot"></span> channel open · 39.9042° N</p>
+      <h1 id="intro-title"><span>晓琦</span><small>的网络角落</small></h1>
+      <p class="intro-copy">这里收录项目、文章、近况，以及一些尚未被归类的东西。没有固定的参观顺序，从一条命令开始就好。</p>
+      <button class="intro-entry inline-command" data-command="help" type="button">第一次来？查看公开命令 <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="terminal" aria-label="命令交流区">
+      <div class="terminal-meta">
+        <span>SESSION / LOCAL</span>
+        <span id="clock" aria-hidden="true">--:--:--</span>
+      </div>
+      <div id="command-history" class="command-history" aria-label="命令历史"></div>
+      <form id="command-form" class="command-form" autocomplete="off">
+        <label for="command-input" class="prompt-mark" aria-label="命令">›</label>
+        <input id="command-input" name="command" type="text" enterkeyhint="send" spellcheck="false" maxlength="120" placeholder="输入 help，或者问我最近在做什么" aria-describedby="command-hint">
+        <button id="submit-command" type="submit"><span>发送</span><span aria-hidden="true">↵</span></button>
+      </form>
+      <p id="command-hint" class="command-hint">支持英文、中文和自然语言命令 · 试试 projects / 项目</p>
+    </section>
+  </main>
+
+  <aside class="coordinates" aria-hidden="true">
+    <span>ARCHIVE 001</span><span>2026 — ∞</span>
+  </aside>
+
+  <div id="window-layer" class="window-layer" aria-live="polite"></div>
+  <div id="live-region" class="sr-only" aria-live="assertive"></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
 </html>

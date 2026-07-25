@@ -1,0 +1,46 @@
+name: Content — Project
+description: Publish one project.
+title: "[project] "
+labels: ["content:project"]
+body:
+  - type: input
+    id: slug
+    attributes:
+      label: Slug
+      description: Optional lowercase letters, numbers, and hyphens. Blank becomes issue-<number>.
+      placeholder: "quiet-systems"
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: input
+    id: status
+    attributes:
+      label: Status
+    validations:
+      required: true
+  - type: input
+    id: year
+    attributes:
+      label: Year
+    validations:
+      required: true
+  - type: textarea
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated display tags.
+  - type: input
+    id: project-url
+    attributes:
+      label: Project URL
+      description: Optional HTTPS URL.
+  - type: textarea
+    id: body
+    attributes:
+      label: Body
+      description: GitHub Flavored Markdown. Raw HTML is rejected.
+    validations:
+      required: true

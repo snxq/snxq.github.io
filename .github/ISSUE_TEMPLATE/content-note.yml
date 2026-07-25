@@ -1,0 +1,25 @@
+name: Content — Note
+description: Publish one short note.
+title: "[note] "
+labels: ["content:note"]
+body:
+  - type: input
+    id: date
+    attributes:
+      label: Date
+      description: Date in YYYY-MM-DD format.
+      placeholder: "2026-07-24"
+    validations:
+      required: true
+  - type: textarea
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated display tags.
+  - type: textarea
+    id: body
+    attributes:
+      label: Body
+      description: GitHub Flavored Markdown. Raw HTML is rejected.
+    validations:
+      required: true
