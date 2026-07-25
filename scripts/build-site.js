@@ -2,7 +2,7 @@ import { cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const deployablePaths = ['index.html', 'favicon.svg', 'styles.css', 'src', 'generated/content'];
+const deployablePaths = ['CNAME', 'index.html', 'favicon.svg', 'styles.css', 'src', 'generated/content'];
 
 export async function buildStaticSite({ rootDirectory, outputDirectory }) {
   await rm(outputDirectory, { force: true, recursive: true });
