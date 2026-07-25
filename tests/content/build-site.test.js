@@ -18,6 +18,7 @@ async function createSourceSite() {
 
   await Promise.all([
     writeFile(join(rootDirectory, 'index.html'), '<!doctype html>'),
+    writeFile(join(rootDirectory, 'CNAME'), 'blog.snxq.cc\n'),
     writeFile(join(rootDirectory, 'favicon.svg'), '<svg/>'),
     writeFile(join(rootDirectory, 'styles.css'), 'body {}'),
     mkdir(join(rootDirectory, 'src'), { recursive: true }),
@@ -183,7 +184,8 @@ test('buildStaticSite copies only deployable roots', async () => {
   await buildStaticSite({ rootDirectory, outputDirectory });
 
   const entries = (await readdir(outputDirectory)).sort();
-  assert.deepEqual(entries, ['favicon.svg', 'generated', 'index.html', 'src', 'styles.css']);
+  assert.deepEqual(entries, ['CNAME', 'favicon.svg', 'generated', 'index.html', 'src', 'styles.css']);
+  assert.equal(await readFile(join(outputDirectory, 'CNAME'), 'utf8'), 'blog.snxq.cc\n');
 
   for (const excludedPath of ['tests', 'docs', '.github', 'node_modules', 'scripts']) {
     await assert.rejects(access(join(outputDirectory, excludedPath)));
