@@ -1,0 +1,24 @@
+name: Content — Bookmark
+description: Save one bookmark.
+title: "[bookmark] "
+labels: ["content:bookmark"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Optional HTTPS URL.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: input
+    id: group
+    attributes:
+      label: Group
+    validations:
+      required: true

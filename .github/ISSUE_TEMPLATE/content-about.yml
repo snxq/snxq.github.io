@@ -1,0 +1,41 @@
+name: Content — About
+description: Update the profile information.
+title: "[about] "
+labels: ["content:about"]
+body:
+  - type: input
+    id: display-name
+    attributes:
+      label: Display Name
+    validations:
+      required: true
+  - type: input
+    id: role
+    attributes:
+      label: Role
+    validations:
+      required: true
+  - type: textarea
+    id: bio
+    attributes:
+      label: Bio
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Location
+  - type: input
+    id: status
+    attributes:
+      label: Status
+  - type: textarea
+    id: fields
+    attributes:
+      label: Fields
+      description: One value per line.
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: One Label | URL entry per line.

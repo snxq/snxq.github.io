@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - banner "网站标识" [ref=e2]:
+    - link "回到命令输入框" [ref=e3] [cursor=pointer]:
+      - /url: "#command-input"
+      - text: snxq.cc
+    - paragraph [ref=e4]: personal signal archive
+  - main [ref=e5]:
+    - region [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: PERSONAL ARCHIVE
+        - generic [ref=e9]: NO. 001
+      - paragraph [ref=e10]: channel open · 39.9042° N
+      - heading "晓琦 的网络角落" [level=1] [ref=e12]:
+        - generic [ref=e13]: 晓琦
+        - generic [ref=e14]: 的网络角落
+      - paragraph [ref=e15]: 这里收录项目、文章、近况，以及一些尚未被归类的东西。没有固定的参观顺序，从一条命令开始就好。
+      - button "第一次来？查看公开命令" [ref=e16] [cursor=pointer]:
+        - text: 第一次来？查看公开命令
+        - generic [ref=e17]: ↗
+    - region "命令交流区" [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: SESSION / LOCAL
+        - generic [ref=e21]: 15:11:38
+      - generic "命令历史" [ref=e22]
+      - generic [ref=e23]:
+        - generic "命令" [ref=e24]: ›
+        - textbox "命令" [ref=e25]:
+          - /placeholder: 输入 help，或者问我最近在做什么
+        - button "发送" [ref=e26] [cursor=pointer]:
+          - generic [ref=e28]: ↵
+      - paragraph [ref=e29]: 支持英文、中文和自然语言命令 · 试试 projects / 项目
+      - text: INPUT CHANNEL
+  - complementary [ref=e30]:
+    - generic [ref=e31]: ARCHIVE 001
+    - generic [ref=e32]: 2026 — ∞

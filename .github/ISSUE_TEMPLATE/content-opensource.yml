@@ -1,0 +1,27 @@
+name: Content — Open Source
+description: Add one open-source record.
+title: "[opensource] "
+labels: ["content:opensource"]
+body:
+  - type: input
+    id: year
+    attributes:
+      label: Year
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: tags
+    attributes:
+      label: Tags
+      description: Comma-separated display tags.
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Optional HTTPS URL.

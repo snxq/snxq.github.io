@@ -1,184 +1,70 @@
-# GitHub Issues 博客系统
+# snxq.cc
 
-一个基于 GitHub Issues 的静态博客系统，使用 React + Vite 构建，支持 GitHub Pages 自动部署。
+`snxq.cc` 是一个静态发布的个人 “signal archive”。访客通过命令入口浏览 profile、projects、posts、notes、now、bookmarks、uses、life 和 opensource 内容；浏览器只加载同源静态资源，不访问 GitHub API。
 
-## 功能特性
-
-- 📝 使用 GitHub Issues 作为博客文章存储
-- 📖 纯静态博客展示
-- 🎨 现代化响应式 UI 设计
-- 🚀 GitHub Pages 自动部署
-- 📱 移动端友好
-- 🔍 Markdown 内容渲染
-
-## 快速开始
-
-### 1. 配置 GitHub 仓库
-
-1. 创建 `config.js` 文件并添加以下配置：
-   ```javascript
-   export const BLOG_CONFIG = {
-     // GitHub 仓库配置
-     REPO_OWNER: 'your-username', // 替换为你的GitHub用户名
-     REPO_NAME: 'your-blog-repo',  // 替换为你的博客仓库名
-     
-     // 博客基本信息
-     BLOG_TITLE: '你的博客标题',
-     BLOG_DESCRIPTION: '博客描述',
-     
-     // GitHub Pages 配置
-     BASE_URL: '/your-repo-name/', // 仓库名，格式: /repository-name/
-     
-     // 文章标签配置
-     BLOG_POST_LABEL: 'blog-post', // 用于标识博客文章的标签
-     
-     // 其他配置
-     POSTS_PER_PAGE: 10, // 每页显示的文章数量
-   }
-   ```
-
-2. 在你的 GitHub 仓库中创建 Issues 作为博客文章：
-   - 添加 `blog-post` 标签来标识博客文章
-   - Issue 标题作为文章标题
-   - Issue 内容作为文章正文（支持 Markdown）
-   - 其他标签作为文章分类标签
-   - 可在文章开头添加 `<!-- date: YYYY-MM-DD -->` 或 `<!-- date: YYYY-MM-DD HH:mm -->` 来指定自定义创建时间
-
-### 2. 本地开发
+## 本地启动
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
+npm ci
+npm run content:build:fixture
+npm run serve
 ```
 
-### 3. GitHub Pages 部署
+打开 <http://localhost:4173/>。`content:build:fixture` 只使用 `tests/fixtures/issues/` 中的测试 fixture，适合本地开发和 Pull Request 验证；它不是发布内容来源。
 
-1. 在 GitHub 仓库设置中启用 GitHub Pages
-2. 选择 "GitHub Actions" 作为部署源
-3. 推送代码到 main 分支，自动触发部署
+## 内容发布规则
 
-### 4. 用户使用说明
+正式内容由仓库的 GitHub Issues 管理：
 
-#### 博客文章展示
+1. 使用 `.github/ISSUE_TEMPLATE/` 中对应内容类型的 Issue Form。
+2. 保留模板自动添加的唯一 `content:*` 标签；仅 open、带一个受支持内容标签、没有 `draft` 标签且作者身份为 `OWNER`、`MEMBER` 或 `COLLABORATOR` 的 Issue 会发布。来自 `NONE`、`CONTRIBUTOR`、`FIRST_TIME_CONTRIBUTOR`、`FIRST_TIMER` 或 `MANNEQUIN` 的内容会被忽略。
+3. `about` 和 `now` 各只允许一个已发布 Issue。
+4. `posts`、`projects`、`notes` 和 `life` 的 Slug 在所有可打开详情的内容之间必须唯一。Slug 会成为稳定详情 ID 和 URL 身份；发布后不要修改。Slug 留空时使用稳定的 `issue-<number>`。
+5. 修复表单或跨内容校验错误后，编辑 Issue 触发重新验证。工作流会在每个受影响 Issue 上创建或更新一条带验证详情的 bot 评论。
 
-博客系统会自动从 GitHub Issues 中获取并展示文章：
+正文支持受控的 GitHub Flavored Markdown：二至四级标题、段落、强调、粗体、删除线、行内代码、代码块、引用、单层有序/无序列表、表格、分隔线、链接和 HTTPS 图片。原始 HTML、任务列表、嵌套列表、不安全链接协议和非 HTTPS 图片会被拒绝。
 
-1. 系统会获取带有 `blog-post` 标签的 Issues
-2. 按创建时间倒序排列显示
-3. 支持 Markdown 格式渲染
-4. 支持自定义文章创建时间
+## 构建和测试
 
-#### 发表文章
+```bash
+# 使用测试 fixture 生成内容
+npm run content:build:fixture
 
-1. 在 GitHub 仓库中创建新的 Issue
-2. 添加 `blog-post` 标签
-3. 使用 Markdown 格式编写内容
-4. （可选）在文章开头添加自定义创建时间：
-   ```markdown
-   <!-- date: 2024-01-15 -->
-   <!-- date: 2024-01-15 14:30 -->
-   
-   # 文章标题
-   
-   文章内容...
-   ```
-5. 发布 Issue，文章将自动显示在博客中
+# 运行完整 Node 测试套件
+npm test
 
-#### 查看文章
+# 生成 dist/ 静态站点
+npm run site:build
 
-1. 在首页浏览文章列表
-2. 点击文章标题查看详细内容
-3. 文章支持代码高亮和 Markdown 扩展语法
-
-## 技术栈
-
-- **前端框架**: React 19
-- **构建工具**: Vite 7
-- **路由**: React Router DOM
-- **GitHub API**: 原生 Fetch API
-- **Markdown 渲染**: react-markdown + remark-gfm + rehype-raw
-- **图标**: Lucide React
-- **部署**: GitHub Pages + GitHub Actions
-
-## 项目结构
-
-```
-src/
-├── components/          # React 组件
-│   ├── Header.jsx      # 头部导航
-│   ├── BlogList.jsx    # 文章列表
-│   └── BlogPost.jsx    # 文章详情页面
-├── context/            # React Context
-│   └── GitHubContext.jsx # GitHub API 管理
-├── App.jsx             # 主应用组件
-├── App.css             # 样式文件
-├── main.jsx            # 应用入口
-└── index.css           # 全局样式
-config.js               # 博客配置文件
-.github/workflows/      # GitHub Actions 工作流
-└── deploy.yml          # 自动部署配置
+# 检查 dist/ 必需静态资源
+npm run site:check
 ```
 
-## 自定义配置
+在连接到目标 GitHub 仓库的本地 checkout 中，可执行真实内容构建：
 
-### 修改仓库配置
-
-在 `config.js` 中修改：
-
-```javascript
-export const BLOG_CONFIG = {
-  REPO_OWNER: 'your-username',
-  REPO_NAME: 'your-blog-repo',
-  // 其他配置...
-}
+```bash
+gh auth login
+gh auth status
+npm run content:build
 ```
 
-### 修改部署路径
+真实本地构建通过 `gh api` 读取 Issues，并通过 `gh repo view` 解析当前 checkout 的仓库；也可用 `--repository owner/repo` 明确指定。若使用 `GITHUB_TOKEN` 直接访问 GitHub API，还必须设置 `GITHUB_REPOSITORY=owner/repo`。未能显式或从当前 checkout 解析仓库时构建会失败，绝不回退到硬编码仓库。GitHub Actions 自动提供仓库和令牌上下文。`--report-file <path>` 会在内容校验失败时写入机器可读报告。
 
-在 `config.js` 中修改 BASE_URL，`vite.config.js` 会自动读取：
+生成目录 `generated/`、部署目录 `dist/`、依赖目录 `node_modules/` 和本地验证报告 `.content-validation-report.json` 均被 Git 忽略。
 
-```javascript
-// config.js
-export const BLOG_CONFIG = {
-  BASE_URL: '/your-repo-name/',
-  // 其他配置...
-}
-```
+## 自动化发布
 
-对应的 `vite.config.js` 配置：
-```javascript
-base: process.env.NODE_ENV === 'production' ? '/your-repo-name/' : '/'
-```
+`.github/workflows/content-deploy.yml` 的行为：
 
-### 自定义博客信息
+- Pull Request：仅使用测试 fixture 构建内容，然后运行测试、站点构建和站点检查；不读取真实 Issues，也不部署。
+- `main` push、Issue 变更和手动运行：读取真实 Issues，校验内容，运行全部检查，并仅在成功后上传 `dist/` 和部署 GitHub Pages。
+- 校验失败：保留上一次成功部署的网站，按受影响 Issue 创建或更新一条 bot 评论，并使工作流失败。
 
-在 `config.js` 中可以自定义博客的基本信息：
+首次生产运行前，在仓库 **Settings → Pages → Build and deployment → Source** 中选择 **GitHub Actions**。工作流不监听 Issue comments，因此 bot 评论不会形成触发循环。
 
-```javascript
-export const BLOG_CONFIG = {
-  BLOG_TITLE: '你的博客标题',        // 显示在页面顶部
-  BLOG_DESCRIPTION: '博客描述',     // 博客简介
-  POSTS_PER_PAGE: 10,              // 每页显示文章数量
-  // 其他配置...
-}
-```
+## 架构边界
 
-### 自定义样式
-
-主要样式文件：
-- `src/App.css` - 组件样式
-- `src/index.css` - 全局样式
-
-## 注意事项
-
-1. **仓库权限**: 确保博客仓库是公开的，以便访问 GitHub API
-2. **标签管理**: 只有带 `blog-post` 标签的 Issues 会显示为博客文章
-3. **内容格式**: 支持完整的 Markdown 语法和 GitHub Flavored Markdown
-4. **自定义时间**: 可在文章开头使用 `<!-- date: YYYY-MM-DD -->` 格式自定义显示时间
-
-## 许可证
-
-MIT License
+- `scripts/content/` 获取、解析、规范化并校验 GitHub Issue 内容，将每个 section 的规范 JSON 字节做 SHA-256 哈希并写为 `<section>.<hash>.json`；`manifest.json` 指向这些不可变文件。整个 `generated/content/` 仅在全部校验成功后原子替换，因此旧哈希文件会被移除。
+- `src/content-api.js` 从同源静态 JSON 加载已发布内容，并保持 UI 使用的命令和窗口响应契约。
+- `scripts/build-site.js` 将前端和已验证内容复制到 `dist/`。
+- `src/app.js` 使用 DOM API 安全渲染内容。访客运行时不需要 GitHub 凭据，也不会请求 `api.github.com`。

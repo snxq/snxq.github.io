@@ -1,0 +1,82 @@
+- generic [ref=e1]:
+  - banner "网站标识" [ref=e2]:
+    - link "回到命令输入框" [ref=e3] [cursor=pointer]:
+      - /url: "#command-input"
+      - text: snxq.cc
+    - paragraph [ref=e4]: personal signal archive
+  - main [ref=e5]:
+    - region [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: PERSONAL ARCHIVE
+        - generic [ref=e9]: NO. 001
+      - paragraph [ref=e10]: channel open · 39.9042° N
+      - heading "晓琦 的网络角落" [level=1] [ref=e12]:
+        - generic [ref=e13]: 晓琦
+        - generic [ref=e14]: 的网络角落
+      - paragraph [ref=e15]: 这里收录项目、文章、近况，以及一些尚未被归类的东西。没有固定的参观顺序，从一条命令开始就好。
+      - button "第一次来？查看公开命令" [ref=e16] [cursor=pointer]:
+        - text: 第一次来？查看公开命令
+        - generic [ref=e17]: ↗
+    - region "命令交流区" [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: SESSION / LOCAL
+        - generic [ref=e21]: 15:12:02
+      - generic "命令历史" [ref=e22]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: › projects
+          - button "已打开「项目」" [ref=e37] [cursor=pointer]
+      - generic [ref=e23]:
+        - generic "命令" [ref=e24]: ›
+        - textbox "命令" [ref=e25]:
+          - /placeholder: 输入 help，或者问我最近在做什么
+        - button "发送" [ref=e26] [cursor=pointer]:
+          - generic [ref=e28]: ↵
+      - paragraph [ref=e29]: 支持英文、中文和自然语言命令 · 试试 projects / 项目
+      - text: INPUT CHANNEL
+  - complementary [ref=e30]:
+    - generic [ref=e31]: ARCHIVE 001
+    - generic [ref=e32]: 2026 — ∞
+  - dialog "项目" [ref=e39]:
+    - banner [ref=e40]:
+      - generic [ref=e42]:
+        - paragraph [ref=e43]: BUILT SIGNALS
+        - heading "项目" [level=2] [ref=e44]
+      - button "关闭窗口" [active] [ref=e46] [cursor=pointer]: 关闭 ×
+    - generic [ref=e48]:
+      - button "打开 Signal Garden" [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: "01"
+            - generic [ref=e53]: ACTIVE
+          - heading "Signal Garden" [level=3] [ref=e54]
+          - paragraph [ref=e55]: 让笔记、链接与未完成想法自然连接的个人信息流实验。
+          - generic [ref=e56]:
+            - generic [ref=e57]: local-first
+            - generic [ref=e58]: web
+          - generic [ref=e59]: ↗
+      - button "打开 Songloft Player" [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: "02"
+            - generic [ref=e64]: SHIPPED
+          - heading "Songloft Player" [level=3] [ref=e65]
+          - paragraph [ref=e66]: 一个专注于本地音乐与无打扰聆听体验的桌面播放器。
+          - generic [ref=e67]:
+            - generic [ref=e68]: desktop
+            - generic [ref=e69]: audio
+          - generic [ref=e70]: ↗
+      - button "打开 Tiny Tools" [ref=e71] [cursor=pointer]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: "03"
+            - generic [ref=e75]: ONGOING
+          - heading "Tiny Tools" [level=3] [ref=e76]
+          - paragraph [ref=e77]: 一组只解决一个问题的小型命令行工具。
+          - generic [ref=e78]:
+            - generic [ref=e79]: cli
+            - generic [ref=e80]: go
+          - generic [ref=e81]: ↗
+    - contentinfo [ref=e82]:
+      - generic [ref=e83]: UPDATED / 2026.07.18
+      - generic [ref=e84]: req-0001
+  - generic [ref=e33]: 已打开「项目」
