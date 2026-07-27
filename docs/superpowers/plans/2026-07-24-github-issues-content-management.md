@@ -147,10 +147,10 @@ If the execution directory is still not a Git repository, stop before this step 
 
 ---
 
-### Task 2: Define Issue Forms and parse their stable field contract
+### Task 2: Define Issue templates and parse the structured field contract
 
 **Files:**
-- Create: `.github/ISSUE_TEMPLATE/content-post.yml`
+- Create: `.github/ISSUE_TEMPLATE/content-post.md`
 - Create: `.github/ISSUE_TEMPLATE/content-project.yml`
 - Create: `.github/ISSUE_TEMPLATE/content-note.yml`
 - Create: `.github/ISSUE_TEMPLATE/content-life.yml`
@@ -162,6 +162,7 @@ If the execution directory is still not a Git repository, stop before this step 
 - Create: `scripts/content/constants.js`
 - Create: `scripts/content/parse-form.js`
 - Test: `tests/content/parse-form.test.js`
+- Test: `tests/content/templates.test.js`
 
 **Interfaces:**
 - Produces `CONTENT_TYPES`, `SECTION_META`, `FORM_FIELDS`, `CONTENT_SCHEMA_VERSION`.
@@ -298,26 +299,21 @@ node --test tests/content/parse-form.test.js
 
 Expected: 2 tests pass.
 
-- [ ] **Step 6: Create all nine Issue templates**
+- [ ] **Step 6: Create eight Issue Forms and one classic post template**
 
-The post template auto-applies `content:post` and provides one normal Body Markdown textarea; it has no Slug, Summary, Date, Tags, Cover Image URL, visible metadata, or hidden metadata override. The Issue title and full body are canonical. The other eight types retain fixed English field labels matching `FORM_FIELDS`, with `Body` last where applicable.
+The classic `content-post.md` template auto-applies `content:post` through front matter. After the closing `---`, its body is completely empty: no headings, instructions, comments, or placeholders may be injected. The Issue title and the author's complete body are canonical. The other eight types retain fixed English field labels matching `FORM_FIELDS`, with `Body` last where applicable.
 
-```yaml
+```markdown
+---
 name: Content — Post
-description: Publish one long-form article from normal readable Markdown.
-title: ""
-labels: ["content:post"]
-body:
-  - type: textarea
-    id: body
-    attributes:
-      label: Body
-      description: Complete GitHub Flavored Markdown article body.
-    validations:
-      required: true
+about: Publish one long-form article from normal readable Markdown.
+title: ''
+labels: 'content:post'
+assignees: ''
+---
 ```
 
-Apply the structured field sets from `FORM_FIELDS` to the remaining eight forms. `Links` uses one `Label | URL` entry per line; `Fields`, `BUILD`, `LEARN`, `READ`, and `LOOP` use one value per line; structured `Tags` fields use comma-separated values.
+Apply the structured field sets from `FORM_FIELDS` to the eight YAML forms. `Links` uses one `Label | URL` entry per line; `Fields`, `BUILD`, `LEARN`, `READ`, and `LOOP` use one value per line; only non-post structured `Tags` fields use comma-separated values. Add a test that asserts eight `.yml` files, one `content-post.md`, valid front matter, and an empty classic-template body.
 
 - [ ] **Step 7: Commit**
 

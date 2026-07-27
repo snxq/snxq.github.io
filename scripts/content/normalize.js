@@ -128,10 +128,31 @@ function issueLabels(issue) {
     .filter(label => label && !label.startsWith('content:') && !SYSTEM_LABELS.has(label));
 }
 
+function firstParagraphText(blocks) {
+  for (const block of blocks) {
+    if (block.type === 'paragraph') {
+      const text = inlineText(block.children).replace(/\s+/gu, ' ').trim();
+      if (text) return text;
+      continue;
+    }
+    if (block.type === 'quote') {
+      const text = firstParagraphText(block.children);
+      if (text) return text;
+      continue;
+    }
+    if (block.type === 'list') {
+      for (const item of block.items) {
+        const text = firstParagraphText(item);
+        if (text) return text;
+      }
+    }
+  }
+  return '';
+}
+
 function postSummary(blocks) {
-  const paragraph = blocks.find(block => block.type === 'paragraph');
-  if (!paragraph) return '';
-  const text = inlineText(paragraph.children).replace(/\s+/gu, ' ').trim();
+  const text = firstParagraphText(blocks);
+  if (!text) return '';
   if (text.length <= SUMMARY_LIMIT) return text;
   return `${text.slice(0, SUMMARY_LIMIT - 1).trimEnd()}…`;
 }

@@ -65,13 +65,13 @@ npm run site:check
 ### Task 3: Prepare repository labels and Pages deployment
 
 **Files:**
-- Existing `.github/ISSUE_TEMPLATE/*.yml`
+- Existing `.github/ISSUE_TEMPLATE/*.yml` and `.github/ISSUE_TEMPLATE/content-post.md`
 - Existing `.github/workflows/content-deploy.yml`
 
 **Interfaces:**
 - Produces labels: `content:post`, `content:project`, `content:note`, `content:life`, `content:bookmark`, `content:use`, `content:opensource`, `content:about`, `content:now`, `draft`.
 
-- [ ] Verify all Issue Forms parse as valid YAML and reference the required labels.
+- [ ] Verify the eight structured Issue Forms parse as valid YAML and reference their required labels; verify `content-post.md` has valid classic-template front matter and an otherwise empty body.
 - [ ] With explicit authorization, create missing labels without deleting unrelated historical labels.
 - [ ] Confirm the workflow permissions and repository Actions permissions allow Issues comments and Pages deployment.
 - [ ] With explicit authorization, set Pages source to GitHub Actions.

@@ -67,6 +67,34 @@ test('native post bodies are not parsed as Issue Form metadata', async () => {
   assert.equal(posts.data.items[0].detail.filter(block => block.type === 'heading').length, 2);
 });
 
+test('classic post template body is published without an injected Body heading', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'snxq-classic-template-'));
+  const output = path.join(root, 'content');
+  const fixture = path.join(root, 'issues.json');
+  await writeFile(fixture, JSON.stringify([{
+    number: 78,
+    title: 'Classic template post',
+    state: 'open',
+    labels: [{ name: 'content:post' }],
+    author_association: 'OWNER',
+    html_url: 'https://example.test/issues/78',
+    created_at: '2026-07-24T07:00:00Z',
+    updated_at: '2026-07-24T08:00:00Z',
+    body: 'First paragraph.\n\n## Section'
+  }]));
+
+  const result = await runCli([
+    '--source', 'fixture', '--fixtures', fixture, '--output', output,
+    '--repository', 'example/site'
+  ]);
+
+  assert.equal(result.code, 0);
+  const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json'), 'utf8'));
+  const posts = JSON.parse(await readFile(path.join(output, manifest.files.posts), 'utf8'));
+  assert.equal(posts.data.items[0].detail[0].type, 'paragraph');
+  assert.equal(posts.data.items[0].detail.some(block => block.type === 'heading' && block.children[0]?.value === 'Body'), false);
+});
+
 test('writes a structured validation report and preserves generated output', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'snxq-report-'));
   const output = path.join(root, 'content');

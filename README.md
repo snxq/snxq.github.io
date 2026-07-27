@@ -16,9 +16,9 @@ npm run serve
 
 正式内容由仓库的 GitHub Issues 管理：
 
-1. 文章使用 `.github/ISSUE_TEMPLATE/content-post.yml` 创建：Issue 标题就是文章标题，正文区域填写完整可读 Markdown；其他内容类型继续使用各自的结构化 Issue Form。
+1. 文章使用经典模板 `.github/ISSUE_TEMPLATE/content-post.md` 创建：模板只有 front matter，编辑区正文为空，Issue 标题就是文章标题，完整可读 Markdown body 不会被注入 `### Body` 或其他说明；其他内容类型继续使用各自的结构化 Issue Form。
 2. 保留模板自动添加的唯一 `content:*` 标签；仅 open、带一个受支持内容标签、没有 `draft` 标签且作者身份为 `OWNER`、`MEMBER` 或 `COLLABORATOR` 的 Issue 会发布。来自 `NONE`、`CONTRIBUTOR`、`FIRST_TIME_CONTRIBUTOR`、`FIRST_TIMER` 或 `MANNEQUIN` 的内容会被忽略。
-3. `content:post` 的发布模型固定为：`id` 是 `issue-<number>`，日期取 Issue `created_at` 的 UTC 日历日期，更新来源取 `updated_at`，正文使用完整 Issue body，摘要取首个有效文本段落并折叠空白、约 160 字截断；标题、图片、代码、分隔线和表格不会作为摘要。没有有效段落时摘要为空。
+3. `content:post` 的发布模型固定为：`id` 是 `issue-<number>`，日期取 Issue `created_at` 的 UTC 日历日期，更新来源取 `updated_at`，正文使用完整 Issue body；摘要按文档顺序递归查找顶层、引用或列表中的首个非空文本段落并折叠空白、约 160 字截断，标题、图片、代码、分隔线和表格不会作为摘要。没有有效段落时摘要为空。
 4. 文章展示标签来自 GitHub labels，但排除全部 `content:*`、`draft` 和 `blog-post` 系统标签。正文中的 `### Slug`、`### Summary` 等文本只是普通可见 Markdown，不会覆盖元数据。
 5. `about` 和 `now` 各只允许一个已发布 Issue。
 6. `projects` 和 `life` 的 Slug 在所有可打开详情的内容（包括固定 `issue-<number>` 文章 ID）之间必须唯一。结构化类型的 Slug 发布后不要修改；留空时使用稳定的 `issue-<number>`。

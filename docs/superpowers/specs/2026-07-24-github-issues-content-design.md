@@ -108,15 +108,15 @@ content:now
 draft
 ```
 
-“设计”“系统”“Go”等展示标签填写在 Issue Form 字段中，不要求全部成为仓库标签。
+文章的“设计”“系统”“Go”等展示标签来自 GitHub labels。只有非文章的结构化内容类型才在 Issue Form 的 `Tags` 字段中填写展示标签；这些结构化标签不要求成为仓库 labels。
 
 ## 4. Issue Forms
 
-为各内容类型提供独立模板；文章模板只提供普通 Body Markdown 编辑区，其他类型使用结构化 Issue Form：
+为各内容类型提供独立模板；文章使用 classic Markdown Issue template，其他类型使用结构化 Issue Form：
 
 ```text
 .github/ISSUE_TEMPLATE/
-├── content-post.yml
+├── content-post.md
 ├── content-project.yml
 ├── content-note.yml
 ├── content-life.yml
@@ -127,7 +127,7 @@ draft
 └── content-now.yml
 ```
 
-每个模板自动添加对应的 `content:*` 标签。Issue 标题作为内容标题。除文章外，结构化表单在 Issue 正文中生成固定字段标题供构建器解析；文章正文不解析任何可见或隐藏元数据字段。
+每个模板自动添加对应的 `content:*` 标签。Issue 标题作为内容标题。八个结构化 YAML 表单在 Issue 正文中生成固定字段标题供构建器解析；文章的 classic Markdown 模板只含 `name/about/title/labels/assignees` front matter，结束分隔线后不得包含标题、说明、注释或占位正文，因此新 Issue 的完整 body 就是作者输入的 Markdown。文章正文不解析任何可见或隐藏元数据字段。
 
 ### 4.1 通用字段
 
@@ -158,7 +158,7 @@ draft
 - 完整 Issue body 作为正文 Markdown；
 - ID 固定为 `issue-<number>`；
 - 日期取 Issue `created_at` 的 UTC 日期，来源更新时间取 `updated_at`；
-- 摘要取第一个有效文本段落：跳过空白、标题、图片、代码、分隔线和表格，提取可读行内文本、折叠空白，并在约 160 字时加省略号；无有效段落则为空；
+- 摘要按文档顺序递归查找第一个非空文本段落（包括引用和列表子块）：跳过空白、标题、图片、代码、分隔线和表格，提取可读行内文本、折叠空白，并在约 160 字时加省略号；无有效段落则为空；
 - 展示标签取 GitHub labels，排除全部 `content:*`、`draft` 和 `blog-post`；
 - 不提供 slug、摘要、日期、标签、封面图等正文元数据字段，也不允许隐藏元数据覆盖。
 

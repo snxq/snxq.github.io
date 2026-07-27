@@ -79,6 +79,24 @@ test('derives a readable bounded summary from the first valid text paragraph', (
   assert.equal(normalized.detail.some(block => block.type === 'heading'), true);
 });
 
+test('finds the first non-empty paragraph recursively in document order', () => {
+  for (const [number, body, expected] of [
+    [31, '> Quote first.', 'Quote first.'],
+    [32, '- List first.', 'List first.'],
+    [33, '> ## Nested heading\n>\n> - Nested list paragraph.', 'Nested list paragraph.']
+  ]) {
+    const post = issue(number, `Nested ${number}`);
+    post.body = body;
+    assert.equal(normalizeIssue(post, 'posts', {}).summary, expected);
+  }
+});
+
+test('skips empty nested paragraphs before the first readable paragraph', () => {
+  const post = issue(34, 'Nested empty');
+  post.body = '> [ ](https://example.com)\n\n- Readable after empty.';
+  assert.equal(normalizeIssue(post, 'posts', {}).summary, 'Readable after empty.');
+});
+
 test('uses an empty summary when the body has no text paragraph', () => {
   const post = issue(30, 'Media only');
   post.body = '## Heading\n\n![image](https://example.com/image.png)\n\n---';
