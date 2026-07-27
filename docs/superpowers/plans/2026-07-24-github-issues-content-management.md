@@ -239,7 +239,7 @@ export const SECTION_META = Object.freeze({
 });
 
 export const FORM_FIELDS = Object.freeze({
-  posts: ['Slug', 'Summary', 'Date', 'Tags', 'Cover Image URL', 'Body'],
+  posts: [],
   projects: ['Slug', 'Summary', 'Status', 'Year', 'Tags', 'Project URL', 'Body'],
   notes: ['Date', 'Tags', 'Body'],
   life: ['Slug', 'Date', 'Summary', 'Tone', 'Image URL', 'Body'],
@@ -298,55 +298,26 @@ node --test tests/content/parse-form.test.js
 
 Expected: 2 tests pass.
 
-- [ ] **Step 6: Create all nine Issue Forms**
+- [ ] **Step 6: Create all nine Issue templates**
 
-Use fixed English field labels matching `FORM_FIELDS`. Place `Body` last in post/project/life forms. Each form auto-applies exactly one corresponding `content:*` label. Example `content-post.yml`:
+The post template auto-applies `content:post` and provides one normal Body Markdown textarea; it has no Slug, Summary, Date, Tags, Cover Image URL, visible metadata, or hidden metadata override. The Issue title and full body are canonical. The other eight types retain fixed English field labels matching `FORM_FIELDS`, with `Body` last where applicable.
 
 ```yaml
 name: Content — Post
-description: Publish one long-form article.
-title: "[post] "
+description: Publish one long-form article from normal readable Markdown.
+title: ""
 labels: ["content:post"]
 body:
-  - type: input
-    id: slug
-    attributes:
-      label: Slug
-      description: Optional lowercase letters, numbers, and hyphens. Blank becomes issue-<number>.
-      placeholder: quiet-systems
-  - type: textarea
-    id: summary
-    attributes:
-      label: Summary
-    validations:
-      required: true
-  - type: input
-    id: date
-    attributes:
-      label: Date
-      placeholder: "2026-07-24"
-    validations:
-      required: true
-  - type: textarea
-    id: tags
-    attributes:
-      label: Tags
-      description: Comma-separated display tags.
-  - type: input
-    id: cover-image-url
-    attributes:
-      label: Cover Image URL
-      description: Optional HTTPS URL.
   - type: textarea
     id: body
     attributes:
       label: Body
-      description: GitHub Flavored Markdown. Raw HTML is rejected.
+      description: Complete GitHub Flavored Markdown article body.
     validations:
       required: true
 ```
 
-Apply the field sets from `FORM_FIELDS` to the remaining eight forms. `Links` uses one `Label | URL` entry per line; `Fields`, `BUILD`, `LEARN`, `READ`, and `LOOP` use one value per line; `Tags` uses comma-separated values.
+Apply the structured field sets from `FORM_FIELDS` to the remaining eight forms. `Links` uses one `Label | URL` entry per line; `Fields`, `BUILD`, `LEARN`, `READ`, and `LOOP` use one value per line; structured `Tags` fields use comma-separated values.
 
 - [ ] **Step 7: Commit**
 
@@ -586,7 +557,7 @@ git commit -m "feat: convert safe GitHub Markdown blocks"
 
 - [ ] **Step 1: Write failing normalization tests**
 
-Cover strict date/year/slug/URL validation, comma-separated tags, newline lists, `Label | URL` links and default `issue-<number>` slug. Include duplicate-slug and duplicate-singleton failures.
+Cover strict date/year/slug/URL validation for structured types, comma-separated structured tags, newline lists, `Label | URL` links, and default `issue-<number>` structured slugs. For posts, cover fixed `issue-<number>` IDs, `created_at` dates, `updated_at` sources, full native Markdown bodies, derived summaries, and non-system label tags. Include duplicate-ID and duplicate-singleton failures.
 
 ```js
 test('accepts supported year values', () => {
@@ -603,7 +574,7 @@ Build to a temporary directory with fixed `generatedAt`. Assert:
 ```js
 assert.equal(manifest.version, 1);
 assert.equal(manifest.files.posts, 'posts.json');
-assert.equal(posts.data.items[0].id, 'quiet-systems');
+assert.equal(posts.data.items[0].id, 'issue-101');
 assert.deepEqual(uses.data.categories, []);
 ```
 
@@ -623,7 +594,7 @@ Use these exact shapes:
 
 ```js
 // post
-{ id, date, title, summary, readingTime: null, tags, coverImage, detail, source }
+{ id, date, title, summary, tags, detail, source }
 // project
 { id, name: title, summary, status, tags, year, url, detail, source }
 // note

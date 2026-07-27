@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 将已完成的新站代码安全合入 `snxq/snxq.github.io`，保留旧仓库历史与 Issues，并由作者逐篇将旧 `blog-post` Issue 原地迁移为新的 `content:post` 格式。
+**Goal:** 将已完成的新站代码安全合入 `snxq/snxq.github.io`，保留旧仓库历史与 Issues，并由作者逐篇只切换旧 `blog-post` Issue 的标签，使原有 Markdown 正文按新的 `content:post` 模型发布。
 
 **Architecture:** 代码、Issue Forms、内容 Issues 和 GitHub Actions 位于同一个 `snxq/snxq.github.io` 仓库。系统只消费新 `content:*` 格式；旧 `blog-post` 在手工迁移前不展示。迁移后的 Issue 触发内容校验、不可变静态 JSON 构建与 GitHub Pages 部署。
 
@@ -113,43 +113,14 @@ npm run site:check
 **Interfaces:**
 - Converts one old `blog-post` Issue to valid `content:post` while retaining its Issue identity.
 
-- [ ] Select one representative article with simple Markdown for the pilot.
-- [ ] Record its Issue number, URL, existing labels, original body, creation date, and comments.
-- [ ] Choose a stable lowercase ASCII slug; do not derive or change it automatically after publication.
-- [ ] Rewrite the Issue body exactly as:
-
-```markdown
-### Slug
-
-<stable-slug>
-
-### Summary
-
-<one concise list summary>
-
-### Date
-
-<YYYY-MM-DD>
-
-### Tags
-
-<tag-one, tag-two>
-
-### Cover Image URL
-
-<optional HTTPS URL or blank>
-
-### Body
-
-<original Markdown body>
-```
-
-- [ ] Ensure `Body` is the final form field.
-- [ ] Add `content:post` and remove `blog-post`; preserve unrelated historical labels only if they remain useful outside display tags.
+- [ ] Select existing Issue #29 as the pilot and record its Issue number, URL, labels, original body, creation date, and comments.
+- [ ] Do not edit or wrap the Issue body; the full existing Markdown is the publishable article.
+- [ ] Confirm its first valid paragraph produces an acceptable derived summary and its non-system labels are the intended display tags.
+- [ ] Add `content:post` and remove `blog-post`; preserve all other useful labels.
 - [ ] Keep the Issue Open and without `draft`.
 - [ ] Verify the Issue event workflow validates, deploys, and does not create an error comment.
-- [ ] Open the public site, run `posts`, open the migrated article, and verify title, summary, date, tags, Markdown, links and images.
-- [ ] Confirm Issue number, URL, comments and edit history remain intact.
+- [ ] Open the public site, run `posts`, open the migrated article, and verify title, derived summary, `created_at` date, labels-as-tags, and unchanged Markdown, links and images.
+- [ ] Confirm ID is `issue-29` and Issue URL, comments, body and edit history remain intact.
 
 ### Task 7: Establish the repeatable manual migration checklist
 
@@ -159,10 +130,11 @@ npm run site:check
 **Interfaces:**
 - Produces a repeatable process for all remaining `blog-post` Issues.
 
-- [ ] Document slug selection, summary length, date source, tag conversion, raw HTML removal and image URL rules.
-- [ ] Document the safe order: edit body first, then change labels only when the body is valid.
-- [ ] Document failure recovery: add `draft` or remove `content:post`, fix the reported field, then publish again.
-- [ ] Confirm no automation bulk-edits old Issues.
+- [ ] Document that post ID/date/summary are automatic: `issue-<number>`, Issue creation date, and first valid text paragraph (about 160 characters).
+- [ ] Document that non-system labels become display tags and `content:*`, `draft`, `blog-post` never display.
+- [ ] Document the safe order: verify the unchanged body against supported Markdown, then switch labels.
+- [ ] Document failure recovery: add `draft` or remove `content:post`, fix only the unsupported Markdown, then publish again.
+- [ ] Confirm no automation bulk-edits old Issues and no migration rewrites their bodies.
 - [ ] Migrate remaining articles one at a time, verifying each successful deployment before starting the next.
 
 ### Task 8: Final production verification

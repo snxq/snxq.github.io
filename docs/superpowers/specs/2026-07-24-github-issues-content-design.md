@@ -6,7 +6,7 @@
 
 使用 `snxq/snxq.github.io` 仓库的 GitHub Issues 作为全部网站内容的编辑后台，当前新站代码也最终合入并替换该仓库中的旧前端实现。内容变化触发 GitHub Actions，在部署阶段拉取、解析、校验 Issues，生成前端消费的静态 JSON，再部署纯静态网站。
 
-现有 `blog-post` Issues 不获得旧格式兼容层。作者逐篇原地修改旧 Issue，使其符合新的 `content:post` Issue Form 字段结构，并将标签从 `blog-post` 调整为 `content:post`。Issue 编号、URL、评论和历史均保留；迁移一篇，该文章便在下一次成功部署后上线。尚未迁移的旧格式 Issue 不展示。
+现有 `blog-post` Issues 采用与新文章相同的原生 Markdown 模型，不需要旧格式兼容解析，也不需要改写正文。作者逐篇只将标签从 `blog-post` 调整为 `content:post`；Issue 标题、完整 Markdown 正文、编号、URL、评论和历史均保留。迁移一篇，该文章便在下一次成功部署后上线。尚未迁移的旧格式 Issue 不展示。
 
 本设计服务于单人、低频、以文字为主的内容维护方式。它不引入数据库、独立服务端、登录系统或浏览器内管理后台。访客浏览器不直接访问 GitHub API。
 
@@ -93,7 +93,7 @@ Issue 数据
 
 ### 3.3 标签职责
 
-GitHub Repository Labels 只表达内容类型和发布流程：
+GitHub Repository Labels 同时表达内容类型、发布流程，以及文章的展示标签。系统标签为九个 `content:*`、`draft` 和历史 `blog-post`；这些标签永不展示。`content:post` 上其余 labels（如“设计”“系统”“Go”）按 GitHub 返回顺序成为站内展示标签。其他结构化内容类型继续在 Issue Form 字段中填写展示标签。
 
 ```text
 content:post
@@ -112,7 +112,7 @@ draft
 
 ## 4. Issue Forms
 
-为各内容类型提供独立表单：
+为各内容类型提供独立模板；文章模板只提供普通 Body Markdown 编辑区，其他类型使用结构化 Issue Form：
 
 ```text
 .github/ISSUE_TEMPLATE/
@@ -127,7 +127,7 @@ draft
 └── content-now.yml
 ```
 
-每个表单自动添加对应的 `content:*` 标签。Issue 标题作为内容标题；表单在 Issue 正文中生成固定字段标题，供构建器解析。
+每个模板自动添加对应的 `content:*` 标签。Issue 标题作为内容标题。除文章外，结构化表单在 Issue 正文中生成固定字段标题供构建器解析；文章正文不解析任何可见或隐藏元数据字段。
 
 ### 4.1 通用字段
 
@@ -142,25 +142,25 @@ draft
 
 ### 4.2 Slug 规则
 
-1. 表单填写 slug 时使用填写值；
-2. 未填写时使用 `issue-<number>`，例如 `issue-42`；
-3. slug 只允许小写 ASCII 字母、数字和连字符；
+1. 文章固定使用 `issue-<number>`，不接受显式 slug；
+2. 其他需要详情 ID 的结构化类型在 Slug 留空时使用 `issue-<number>`；
+3. 显式 slug 只允许小写 ASCII 字母、数字和连字符；
 4. 不根据中文标题自动生成拼音或英文 slug；
-5. slug 在所有内容类型之间全局唯一；
-6. 发布后修改 slug 会改变站内稳定标识，应避免随意修改；
-7. Issue number 保留在生成数据中，用于定位来源和生成编辑链接，但不作为永久标识。
+5. 所有详情 ID（包括文章固定 ID）全局唯一；
+6. 结构化类型发布后修改 slug 会改变站内稳定标识，应避免随意修改；
+7. Issue number 保留在生成数据中，用于定位来源和生成编辑链接。
 
 ### 4.3 各类型字段
 
 #### 文章 `content:post`
 
-- Issue 标题；
-- slug；
-- 摘要；
-- 发布日期；
-- 展示标签；
-- 正文 Markdown；
-- 可选封面图。
+- Issue 标题作为文章标题；
+- 完整 Issue body 作为正文 Markdown；
+- ID 固定为 `issue-<number>`；
+- 日期取 Issue `created_at` 的 UTC 日期，来源更新时间取 `updated_at`；
+- 摘要取第一个有效文本段落：跳过空白、标题、图片、代码、分隔线和表格，提取可读行内文本、折叠空白，并在约 160 字时加省略号；无有效段落则为空；
+- 展示标签取 GitHub labels，排除全部 `content:*`、`draft` 和 `blog-post`；
+- 不提供 slug、摘要、日期、标签、封面图等正文元数据字段，也不允许隐藏元数据覆盖。
 
 #### 项目 `content:project`
 
@@ -503,14 +503,15 @@ Issue 事件和主分支部署：
 
 ### 13.2 旧文章原地迁移
 
-系统只支持新 `content:*` 格式，不实现 `blog-post` 兼容解析。每篇旧文章手工原地修改：
+系统只发布带 `content:*` 的内容，不实现 `blog-post` 标签兼容发布；但旧文章正文天然就是新的 `content:post` 原生 Markdown 格式。每篇旧文章手工原地迁移：
 
-1. 保留原 Issue 标题、编号、URL、评论和历史；
-2. 将正文整理为 `Slug`、`Summary`、`Date`、`Tags`、`Cover Image URL`、`Body` 固定字段；
-3. `Body` 必须是最后一个字段，并保留原 Markdown 正文；
-4. 添加 `content:post`，删除 `blog-post`；
-5. 保持 Issue Open 且不添加 `draft`；
-6. 保存后等待内容构建与部署成功。
+1. 保留原 Issue 标题、完整正文、编号、URL、评论和历史；
+2. 确认作者受信任、Issue 为 Open、正文符合安全 Markdown 规则且没有 `draft`；
+3. 添加 `content:post`，删除 `blog-post`；
+4. 保留希望作为展示标签的其他 labels；
+5. 保存后等待内容构建与部署成功。
+
+Issue #29 因而只需标签变更即可发布，正文必须保持不动。
 
 迁移一篇便上线一篇。未迁移的 `blog-post` Issue 没有 `content:*` 标签，因此不展示。若构建校验失败，线上保留上一版，工作流在对应 Issue 更新错误评论。
 

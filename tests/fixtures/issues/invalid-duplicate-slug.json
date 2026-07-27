@@ -10,8 +10,9 @@
     ],
     "html_url": "https://github.com/snxq/snxq.cc/issues/1",
     "updated_at": "2026-07-24T08:00:00Z",
-    "body": "### Slug\n\nsame\n\n### Summary\n\nPost.\n\n### Date\n\n2026-07-24\n\n### Tags\n\n\n\n### Cover Image URL\n\n\n\n### Body\n\nPost body.",
-    "author_association": "OWNER"
+    "body": "Post body.",
+    "author_association": "OWNER",
+    "created_at": "2026-07-24T08:00:00Z"
   },
   {
     "number": 2,
@@ -24,7 +25,8 @@
     ],
     "html_url": "https://github.com/snxq/snxq.cc/issues/2",
     "updated_at": "2026-07-24T08:00:00Z",
-    "body": "### Slug\n\nsame\n\n### Summary\n\nProject.\n\n### Status\n\nACTIVE\n\n### Year\n\n2026\n\n### Tags\n\n\n\n### Project URL\n\n\n\n### Body\n\nProject body.",
-    "author_association": "OWNER"
+    "body": "### Slug\n\nissue-1\n\n### Summary\n\nProject.\n\n### Status\n\nACTIVE\n\n### Year\n\n2026\n\n### Tags\n\n\n\n### Project URL\n\n\n\n### Body\n\nProject body.",
+    "author_association": "OWNER",
+    "created_at": "2026-07-24T08:00:00Z"
   }
 ]

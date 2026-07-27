@@ -6,12 +6,19 @@
     "labels": [
       {
         "name": "content:post"
+      },
+      {
+        "name": "design"
+      },
+      {
+        "name": "systems"
       }
     ],
     "html_url": "https://github.com/snxq/snxq.cc/issues/101",
     "updated_at": "2026-07-24T07:00:00Z",
-    "body": "### Slug\n\nquiet-systems\n\n### Summary\n\nA quiet summary.\n\n### Date\n\n2026-07-24\n\n### Tags\n\ndesign, systems\n\n### Cover Image URL\n\nhttps://example.com/quiet.png\n\n### Body\n\nA **quiet** system.",
-    "author_association": "OWNER"
+    "body": "A **quiet** system.",
+    "author_association": "OWNER",
+    "created_at": "2026-07-24T07:00:00Z"
   },
   {
     "number": 100,
@@ -20,12 +27,16 @@
     "labels": [
       {
         "name": "content:post"
+      },
+      {
+        "name": "archive"
       }
     ],
     "html_url": "https://github.com/snxq/snxq.cc/issues/100",
     "updated_at": "2026-07-20T07:00:00Z",
-    "body": "### Slug\n\nolder-post\n\n### Summary\n\nOlder summary.\n\n### Date\n\n2026-06-01\n\n### Tags\n\narchive\n\n### Cover Image URL\n\n\n\n### Body\n\nOlder body.",
-    "author_association": "OWNER"
+    "body": "Older body.",
+    "author_association": "OWNER",
+    "created_at": "2026-07-20T07:00:00Z"
   },
   {
     "number": 90,
@@ -39,7 +50,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/90",
     "updated_at": "2026-07-10T07:00:00Z",
     "body": "### Slug\n\nold-project\n\n### Summary\n\nOld project.\n\n### Status\n\nSHIPPED\n\n### Year\n\n2024—2025\n\n### Tags\n\nweb\n\n### Project URL\n\n\n\n### Body\n\nDetails.",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-10T07:00:00Z"
   },
   {
     "number": 91,
@@ -53,7 +65,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/91",
     "updated_at": "2026-07-11T07:00:00Z",
     "body": "### Slug\n\nnew-project\n\n### Summary\n\nNew project.\n\n### Status\n\nACTIVE\n\n### Year\n\n2026\n\n### Tags\n\ncli\n\n### Project URL\n\nhttps://example.com/project\n\n### Body\n\nDetails.",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-11T07:00:00Z"
   },
   {
     "number": 80,
@@ -67,7 +80,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/80",
     "updated_at": "2026-07-12T07:00:00Z",
     "body": "### Date\n\n2026-07-22\n\n### Tags\n\nnote\n\n### Body\n\nA **short** note.",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-12T07:00:00Z"
   },
   {
     "number": 70,
@@ -81,7 +95,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/70",
     "updated_at": "2026-07-13T07:00:00Z",
     "body": "### Slug\n\nrain\n\n### Date\n\n2026-07-01\n\n### Summary\n\nA rainy day.\n\n### Tone\n\nblue\n\n### Image URL\n\n\n\n### Body\n\nRain details.",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-13T07:00:00Z"
   },
   {
     "number": 60,
@@ -95,7 +110,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/60",
     "updated_at": "2026-07-14T07:00:00Z",
     "body": "### URL\n\nhttps://example.com/old-tool\n\n### Description\n\nOld reference.\n\n### Group\n\n工具",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-14T07:00:00Z"
   },
   {
     "number": 61,
@@ -109,7 +125,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/61",
     "updated_at": "2026-07-15T07:00:00Z",
     "body": "### URL\n\nhttps://example.com/new-tool\n\n### Description\n\nNew reference.\n\n### Group\n\n工具",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-15T07:00:00Z"
   },
   {
     "number": 62,
@@ -123,7 +140,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/62",
     "updated_at": "2026-07-16T07:00:00Z",
     "body": "### URL\n\nhttps://example.com/web\n\n### Description\n\nA web place.\n\n### Group\n\n网络",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-16T07:00:00Z"
   },
   {
     "number": 50,
@@ -137,7 +155,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/50",
     "updated_at": "2026-07-17T07:00:00Z",
     "body": "### Year\n\n2024\n\n### Description\n\nOlder contribution.\n\n### Tags\n\nlinux\n\n### URL\n\n",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-17T07:00:00Z"
   },
   {
     "number": 51,
@@ -151,7 +170,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/51",
     "updated_at": "2026-07-18T07:00:00Z",
     "body": "### Year\n\n2026\n\n### Description\n\nRecent contribution.\n\n### Tags\n\nnode\n\n### URL\n\nhttps://example.com/oss",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-18T07:00:00Z"
   },
   {
     "number": 40,
@@ -165,7 +185,8 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/40",
     "updated_at": "2026-07-19T07:00:00Z",
     "body": "### Display Name\n\nsnxq\n\n### Role\n\nbuilder\n\n### Bio\n\nBuilding quiet systems.\n\n### Location\n\nUTC+8\n\n### Status\n\nactive\n\n### Fields\n\nSoftware\nDesign\n\n### Links\n\nGitHub | https://github.com/snxq",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-19T07:00:00Z"
   },
   {
     "number": 41,
@@ -179,6 +200,7 @@
     "html_url": "https://github.com/snxq/snxq.cc/issues/41",
     "updated_at": "2026-07-20T07:00:00Z",
     "body": "### Summary\n\nBuilding the content pipeline.\n\n### BUILD\n\nStatic JSON\n\n### LEARN\n\nAtomic writes\n\n### READ\n\nDocumentation\n\n### LOOP\n\nRain",
-    "author_association": "OWNER"
+    "author_association": "OWNER",
+    "created_at": "2026-07-20T07:00:00Z"
   }
 ]

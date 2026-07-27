@@ -69,7 +69,7 @@ const tagsSchema = z.array(z.string());
 
 export const postSchema = z.object({
   id: z.string().min(1), date: z.string().min(1), title: z.string(), summary: z.string(),
-  readingTime: z.null(), tags: tagsSchema, coverImage: imageUrlSchema.nullable(), detail: detailSchema, source: sourceSchema
+  tags: tagsSchema, detail: detailSchema, source: sourceSchema
 }).strict();
 export const projectSchema = z.object({
   id: z.string().min(1), name: z.string(), summary: z.string(), status: z.string(), tags: tagsSchema,

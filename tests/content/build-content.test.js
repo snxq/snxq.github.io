@@ -29,7 +29,10 @@ test('builds deterministic schema-valid documents for all nine sections', async 
     `posts.${createHash('sha256').update(postsBytes).digest('hex')}.json`
   );
   assert.equal(first.manifest.source.issueCount, issues.length);
-  assert.equal(first.sections.posts.data.items[0].id, 'quiet-systems');
+  assert.equal(first.sections.posts.data.items[0].id, 'issue-101');
+  assert.equal(first.sections.posts.data.items[0].date, '2026-07-24');
+  assert.equal(first.sections.posts.data.items[0].summary, 'A quiet system.');
+  assert.deepEqual(first.sections.posts.data.items[0].tags, ['design', 'systems']);
   assert.deepEqual(first.sections.uses.data.categories, []);
   assert.equal(Object.keys(first.sections).length, 9);
   assert.equal(manifestSchema.safeParse(first.manifest).success, true);
@@ -89,7 +92,7 @@ test('sorts section data and grouped entries deterministically', async () => {
     issues: await fixtureIssues(), repository: 'snxq/snxq.cc', generatedAt
   });
 
-  assert.deepEqual(sections.posts.data.items.map(item => item.id), ['quiet-systems', 'older-post']);
+  assert.deepEqual(sections.posts.data.items.map(item => item.id), ['issue-101', 'issue-100']);
   assert.deepEqual(sections.projects.data.items.map(item => item.name), ['New Project', 'Old Project']);
   assert.deepEqual(sections.bookmarks.data.groups.map(group => group.name), ['工具', '网络']);
   assert.deepEqual(sections.bookmarks.data.groups[0].links.map(link => link.name), ['New Tool', 'Old Tool']);
@@ -140,7 +143,7 @@ test('writes manifest and all section files atomically from fixture input', asyn
   assert.equal(entries.filter(name => /^(about|bookmarks|life|notes|now|opensource|posts|projects|uses)\.[a-f0-9]{64}\.json$/.test(name)).length, 9);
   const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json'), 'utf8'));
   const posts = JSON.parse(await readFile(path.join(output, manifest.files.posts), 'utf8'));
-  assert.equal(posts.data.items[0].id, 'quiet-systems');
+  assert.equal(posts.data.items[0].id, 'issue-101');
 });
 
 test('does not report a committed replacement as failed when backup cleanup fails', async () => {
