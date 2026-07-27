@@ -16,15 +16,22 @@ npm run serve
 
 正式内容由仓库的 GitHub Issues 管理：
 
-1. 使用 `.github/ISSUE_TEMPLATE/` 中对应内容类型的 Issue Form。
+1. 文章使用 `.github/ISSUE_TEMPLATE/content-post.yml` 创建：Issue 标题就是文章标题，正文区域填写完整可读 Markdown；其他内容类型继续使用各自的结构化 Issue Form。
 2. 保留模板自动添加的唯一 `content:*` 标签；仅 open、带一个受支持内容标签、没有 `draft` 标签且作者身份为 `OWNER`、`MEMBER` 或 `COLLABORATOR` 的 Issue 会发布。来自 `NONE`、`CONTRIBUTOR`、`FIRST_TIME_CONTRIBUTOR`、`FIRST_TIMER` 或 `MANNEQUIN` 的内容会被忽略。
-3. `about` 和 `now` 各只允许一个已发布 Issue。
-4. `posts`、`projects`、`notes` 和 `life` 的 Slug 在所有可打开详情的内容之间必须唯一。Slug 会成为稳定详情 ID 和 URL 身份；发布后不要修改。Slug 留空时使用稳定的 `issue-<number>`。
-5. 修复表单或跨内容校验错误后，编辑 Issue 触发重新验证。工作流会在每个受影响 Issue 上创建或更新一条带验证详情的 bot 评论。
+3. `content:post` 的发布模型固定为：`id` 是 `issue-<number>`，日期取 Issue `created_at` 的 UTC 日历日期，更新来源取 `updated_at`，正文使用完整 Issue body，摘要取首个有效文本段落并折叠空白、约 160 字截断；标题、图片、代码、分隔线和表格不会作为摘要。没有有效段落时摘要为空。
+4. 文章展示标签来自 GitHub labels，但排除全部 `content:*`、`draft` 和 `blog-post` 系统标签。正文中的 `### Slug`、`### Summary` 等文本只是普通可见 Markdown，不会覆盖元数据。
+5. `about` 和 `now` 各只允许一个已发布 Issue。
+6. `projects` 和 `life` 的 Slug 在所有可打开详情的内容（包括固定 `issue-<number>` 文章 ID）之间必须唯一。结构化类型的 Slug 发布后不要修改；留空时使用稳定的 `issue-<number>`。
+7. 修复表单或跨内容校验错误后，编辑 Issue 触发重新验证。工作流会在每个受影响 Issue 上创建或更新一条带验证详情的 bot 评论。
 
 正文支持受控的 GitHub Flavored Markdown：二至四级标题、段落、强调、粗体、删除线、行内代码、代码块、引用、单层有序/无序列表、表格、分隔线、链接和 HTTPS 图片。原始 HTML、任务列表、嵌套列表、不安全链接协议和非 HTTPS 图片会被拒绝。
 
+## 旧文章迁移
+
+旧 `blog-post` Issue 无需改正文。逐篇确认 Issue 为可信作者创建且保持 Open，然后添加 `content:post`、移除 `blog-post`；原有非系统 labels 会直接成为展示标签。标签变更后，原 Issue 标题、完整 Markdown body、编号、URL、评论和编辑历史均保留。以现有 Issue #29 为代表的旧文章只需这次标签切换即可发布。若校验失败，可先添加 `draft` 或移除 `content:post`，修复安全 Markdown 后再发布；不要批量改写旧 Issue。
+
 ## 构建和测试
+
 
 ```bash
 # 使用测试 fixture 生成内容

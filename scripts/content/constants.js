@@ -25,7 +25,7 @@ export const SECTION_META = Object.freeze({
 });
 
 export const FORM_FIELDS = Object.freeze({
-  posts: ['Slug', 'Summary', 'Date', 'Tags', 'Cover Image URL', 'Body'],
+  posts: [],
   projects: ['Slug', 'Summary', 'Status', 'Year', 'Tags', 'Project URL', 'Body'],
   notes: ['Date', 'Tags', 'Body'],
   life: ['Slug', 'Date', 'Summary', 'Tone', 'Image URL', 'Body'],

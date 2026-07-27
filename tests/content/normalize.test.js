@@ -9,23 +9,19 @@ import {
   validateYear
 } from '../../scripts/content/normalize.js';
 
-function issue(number, title = '[post] Example') {
+function issue(number, title = 'Example') {
   return {
     number,
     title,
+    body: 'A **quiet** paragraph.',
+    labels: [{ name: 'content:post' }, { name: 'design' }, { name: 'draft' }, { name: 'blog-post' }, { name: 'systems' }],
     html_url: `https://github.com/acme/site/issues/${number}`,
+    created_at: '2026-07-24T07:00:00Z',
     updated_at: '2026-07-24T08:00:00Z'
   };
 }
 
-const postFields = {
-  Slug: 'quiet-systems',
-  Summary: 'A quiet summary',
-  Date: '2026-07-24',
-  Tags: 'design, systems, 设计',
-  'Cover Image URL': 'https://example.com/cover.png',
-  Body: 'A **quiet** paragraph.'
-};
+const postFields = {};
 
 test('accepts strict calendar dates and supported year values', () => {
   assert.doesNotThrow(() => validateDate('2024-02-29'));
@@ -40,15 +36,13 @@ test('accepts strict calendar dates and supported year values', () => {
   }
 });
 
-test('normalizes a post with tags, blocks, source and canonical URLs', () => {
+test('normalizes a post from native Issue properties only', () => {
   assert.deepEqual(normalizeIssue(issue(12), 'posts', postFields), {
-    id: 'quiet-systems',
+    id: 'issue-12',
     date: '2026-07-24',
     title: 'Example',
-    summary: 'A quiet summary',
-    readingTime: null,
-    tags: ['design', 'systems', '设计'],
-    coverImage: 'https://example.com/cover.png',
+    summary: 'A quiet paragraph.',
+    tags: ['design', 'systems'],
     detail: [{
       type: 'paragraph',
       children: [
@@ -65,15 +59,34 @@ test('normalizes a post with tags, blocks, source and canonical URLs', () => {
   });
 });
 
-test('uses issue-number slugs and rejects invalid explicit slugs and URLs', () => {
-  assert.equal(normalizeIssue(issue(7), 'posts', { ...postFields, Slug: '' }).id, 'issue-7');
-  for (const slug of ['Upper', 'two words', '-edge', 'edge-', 'two--hyphens']) {
-    assert.throws(() => normalizeIssue(issue(7), 'posts', { ...postFields, Slug: slug }), /Slug/);
-  }
-  assert.throws(
-    () => normalizeIssue(issue(7), 'posts', { ...postFields, 'Cover Image URL': 'http://example.com/a.png' }),
-    /Cover Image URL/
-  );
+test('uses the complete native Issue title for posts', () => {
+  assert.equal(normalizeIssue(issue(13, '[post] Bracketed title'), 'posts', {}).title, '[post] Bracketed title');
+});
+
+test('derives a readable bounded summary from the first valid text paragraph', () => {
+  const longText = `This is a [linked](https://example.com) paragraph with **formatting** and enough words to exceed the summary limit ${'word '.repeat(30)}`;
+  const post = issue(29, 'Old article');
+  post.body = `   \n\n## Heading\n\n![cover](https://example.com/cover.png)\n\n\`\`\`js\ncode()\n\`\`\`\n\n---\n\n| a | b |\n| - | - |\n| c | d |\n\n${longText}`;
+
+  const normalized = normalizeIssue(post, 'posts', {
+    Slug: 'hidden-override', Summary: 'hidden override', Date: '1999-01-01', Tags: 'hidden', Body: 'hidden body'
+  });
+  assert.equal(normalized.id, 'issue-29');
+  assert.equal(normalized.date, '2026-07-24');
+  assert.equal(normalized.summary.length <= 160, true);
+  assert.match(normalized.summary, /^This is a linked paragraph with formatting/);
+  assert.match(normalized.summary, /…$/);
+  assert.equal(normalized.detail.some(block => block.type === 'heading'), true);
+});
+
+test('uses an empty summary when the body has no text paragraph', () => {
+  const post = issue(30, 'Media only');
+  post.body = '## Heading\n\n![image](https://example.com/image.png)\n\n---';
+  assert.equal(normalizeIssue(post, 'posts', {}).summary, '');
+});
+
+test('post identity is always the Issue number and other content still validates slugs and URLs', () => {
+  assert.equal(normalizeIssue(issue(7), 'posts', { Slug: 'ignored' }).id, 'issue-7');
   assert.throws(
     () => normalizeIssue(issue(7, '[project] Project'), 'projects', {
       Slug: '', Summary: 'Summary', Status: 'ACTIVE', Year: '2026', Tags: '',
@@ -157,12 +170,10 @@ test('normalizes about newline fields, Label | URL links, and now lists', () => 
   ]);
 });
 
-test('rejects missing required fields and duplicate global slugs or singletons', () => {
-  assert.throws(() => normalizeIssue(issue(1), 'posts', { ...postFields, Summary: '' }), /Summary/);
-
-  const first = normalizeIssue(issue(20), 'posts', postFields);
+test('rejects missing required structured fields and duplicate global detail IDs or singletons', () => {
+  const first = normalizeIssue(issue(20), 'posts', {});
   const second = normalizeIssue(issue(21, '[life] Same'), 'life', {
-    Slug: 'quiet-systems', Date: '2026-07-01', Summary: 'Summary', Tone: '', 'Image URL': '', Body: 'Body'
+    Slug: 'issue-20', Date: '2026-07-01', Summary: 'Summary', Tone: '', 'Image URL': '', Body: 'Body'
   });
   assert.throws(() => validateCrossContent([
     { section: 'posts', issue: issue(20), item: first },

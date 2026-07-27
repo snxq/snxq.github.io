@@ -39,41 +39,32 @@ test('real source fails without an explicit or resolvable repository', async () 
   assert.doesNotMatch(result.stderr, /snxq\/snxq\.cc/);
 });
 
-test('reports duplicate Issue Form fields with Issue context and preserves output', async () => {
+test('native post bodies are not parsed as Issue Form metadata', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'snxq-form-report-'));
   const output = path.join(root, 'content');
   const fixture = path.join(root, 'issues.json');
-  const report = path.join(root, 'report.json');
-  await mkdir(output);
-  await writeFile(path.join(output, 'sentinel.txt'), 'previous');
   await writeFile(fixture, JSON.stringify([{
     number: 77,
-    title: 'Duplicate field',
+    title: 'Native post',
     state: 'open',
     labels: [{ name: 'content:post' }],
     author_association: 'OWNER',
     html_url: 'https://example.test/issues/77',
+    created_at: '2026-07-24T07:00:00Z',
     updated_at: '2026-07-24T08:00:00Z',
-    body: '### Slug\n\nduplicate-field\n\n### Summary\n\nFirst.\n\n### Summary\n\nSecond.\n\n### Date\n\n2026-07-24\n\n### Body\n\nBody.'
+    body: '### Summary\n\nFirst.\n\n### Summary\n\nSecond.'
   }]));
 
   const result = await runCli([
     '--source', 'fixture', '--fixtures', fixture, '--output', output,
-    '--repository', 'example/site', '--report-file', report
+    '--repository', 'example/site'
   ]);
 
-  assert.equal(result.code, 1);
-  assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
-  assert.deepEqual(JSON.parse(await readFile(report, 'utf8')), {
-    marker: 'snxq-content-validation',
-    errors: [{
-      issueNumber: 77,
-      title: 'Duplicate field',
-      field: 'Summary',
-      reason: 'duplicate Issue Form field "Summary"',
-      url: 'https://example.test/issues/77'
-    }]
-  });
+  assert.equal(result.code, 0);
+  const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json'), 'utf8'));
+  const posts = JSON.parse(await readFile(path.join(output, manifest.files.posts), 'utf8'));
+  assert.equal(posts.data.items[0].summary, 'First.');
+  assert.equal(posts.data.items[0].detail.filter(block => block.type === 'heading').length, 2);
 });
 
 test('writes a structured validation report and preserves generated output', async () => {
@@ -91,8 +82,9 @@ test('writes a structured validation report and preserves generated output', asy
       labels: [{ name: 'content:post' }],
       author_association: 'OWNER',
       html_url: 'https://example.test/issues/31',
+      created_at: '2026-07-24T07:00:00Z',
       updated_at: '2026-07-24T08:00:00Z',
-      body: '### Slug\n\nexample\n\n### Summary\n\nFirst.\n\n### Date\n\n2026-07-24\n\n### Tags\n\n\n\n### Cover Image URL\n\n\n\n### Body\n\nFirst body.'
+      body: 'First body.'
     },
     {
       number: 42,
@@ -102,7 +94,7 @@ test('writes a structured validation report and preserves generated output', asy
       author_association: 'OWNER',
       html_url: 'https://example.test/issues/42',
       updated_at: '2026-07-24T08:00:00Z',
-      body: '### Slug\n\nexample\n\n### Summary\n\nExample.\n\n### Status\n\nACTIVE\n\n### Year\n\n2026\n\n### Tags\n\n\n\n### Project URL\n\n\n\n### Body\n\nExample body.'
+      body: '### Slug\n\nissue-31\n\n### Summary\n\nExample.\n\n### Status\n\nACTIVE\n\n### Year\n\n2026\n\n### Tags\n\n\n\n### Project URL\n\n\n\n### Body\n\nExample body.'
     }
   ]));
 
@@ -122,7 +114,7 @@ test('writes a structured validation report and preserves generated output', asy
       issueNumber: 42,
       title: 'Example',
       field: 'Slug',
-      reason: 'duplicate slug "example"; already used by issue #31',
+      reason: 'duplicate slug "issue-31"; already used by issue #31',
       url: 'https://example.test/issues/42'
     }]
   });

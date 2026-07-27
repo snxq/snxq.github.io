@@ -6,6 +6,8 @@ const YEAR_PATTERN = /^(\d{4})(?:—(\d{4})?)?$/;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+const SUMMARY_LIMIT = 160;
+const SYSTEM_LABELS = new Set(['draft', 'blog-post']);
 const TITLE_PREFIX = /^\[[^\]]+\]\s*/;
 const DETAIL_SECTIONS = new Set(['posts', 'projects', 'life']);
 const SINGLETON_SECTIONS = new Set(['about', 'now']);
@@ -89,6 +91,12 @@ function lines(value) {
   return value.split('\n').map(item => item.trim()).filter(Boolean);
 }
 
+function postTitle(issue) {
+  const value = String(issue.title ?? '').trim();
+  if (!value) fail(issue, 'Title', 'title is required');
+  return value;
+}
+
 function title(issue) {
   const value = String(issue.title ?? '').replace(TITLE_PREFIX, '').trim();
   if (!value) fail(issue, 'Title', 'title is required after the content prefix');
@@ -110,8 +118,27 @@ function detail(issue, body) {
 function inlineText(nodes) {
   return nodes.map(node => {
     if (node.type === 'text' || node.type === 'inlineCode') return node.value;
-    return inlineText(node.children);
+    return inlineText(node.children ?? []);
   }).join('');
+}
+
+function issueLabels(issue) {
+  return (Array.isArray(issue.labels) ? issue.labels : [])
+    .map(label => typeof label === 'string' ? label : label.name)
+    .filter(label => label && !label.startsWith('content:') && !SYSTEM_LABELS.has(label));
+}
+
+function postSummary(blocks) {
+  const paragraph = blocks.find(block => block.type === 'paragraph');
+  if (!paragraph) return '';
+  const text = inlineText(paragraph.children).replace(/\s+/gu, ' ').trim();
+  if (text.length <= SUMMARY_LIMIT) return text;
+  return `${text.slice(0, SUMMARY_LIMIT - 1).trimEnd()}…`;
+}
+
+function postDate(issue) {
+  const value = String(issue.created_at ?? '').slice(0, 10);
+  return validateDate(value, issue);
 }
 
 function noteText(issue, body) {
@@ -144,16 +171,14 @@ export function normalizeIssue(issue, section, fields) {
   const itemSource = source(issue);
   switch (section) {
     case 'posts': {
-      const date = validateDate(required(issue, fields, 'Date'), issue);
+      const blocks = detail(issue, String(issue.body ?? ''));
       return {
-        id: slug(issue, optional(fields, 'Slug')),
-        date,
-        title: title(issue),
-        summary: required(issue, fields, 'Summary'),
-        readingTime: null,
-        tags: tags(optional(fields, 'Tags')),
-        coverImage: url(issue, 'Cover Image URL', optional(fields, 'Cover Image URL'), { protocols: new Set(['https:']) }),
-        detail: detail(issue, required(issue, fields, 'Body')),
+        id: `issue-${issue.number}`,
+        date: postDate(issue),
+        title: postTitle(issue),
+        summary: postSummary(blocks),
+        tags: issueLabels(issue),
+        detail: blocks,
         source: itemSource
       };
     }

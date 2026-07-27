@@ -6,7 +6,7 @@ This file provides operational guidance for Claude Code when working in this rep
 
 `snxq.cc` is a statically published personal “signal archive.” The browser UI accepts English and Chinese commands and opens accessible in-page windows for about, projects, posts, notes, now, bookmarks, uses, life, and open-source history.
 
-Production content is authored with GitHub Issue Forms, validated during CI, converted to `generated/content/*.json`, and deployed as static files. The production browser adapter is `src/content-api.js`. Do not introduce mock, fake, sample, or placeholder components, data, or naming into production code or documentation. Test fixtures and test doubles are permitted only under tests.
+Production content is authored with GitHub Issues: posts use a native full-body Markdown editor while other content types use structured Issue Forms. CI validates Issues, converts them to `generated/content/*.json`, and deploys static files. The production browser adapter is `src/content-api.js`. Do not introduce mock, fake, sample, or placeholder components, data, or naming into production code or documentation. Test fixtures and test doubles are permitted only under tests.
 
 Visitors never access the GitHub API. Browser network access must remain limited to same-origin static assets. GitHub credentials and Issue fetching belong only in the local/CI content build.
 
@@ -41,10 +41,11 @@ Ignored build outputs are `node_modules/`, `generated/`, `dist/`, and `.content-
 
 ## Content authoring and publication
 
-- Use the Issue Forms in `.github/ISSUE_TEMPLATE/`; preserve their `content:*` labels and field headings.
+- Posts use `.github/ISSUE_TEMPLATE/content-post.yml`: the Issue title is the post title and the complete Issue body is the Markdown article. Other content types retain their structured Issue Form headings.
 - Only open Issues with exactly one supported content label, no `draft` label, and `author_association` of `OWNER`, `MEMBER`, or `COLLABORATOR` publish. Untrusted author associations are ignored. Pull Requests never publish.
+- `content:post` always uses ID `issue-<number>`, the UTC date from `created_at`, source `updated_at`, and full body Markdown. Its summary is the first valid text paragraph, whitespace-collapsed and truncated to about 160 characters; headings, images, code, dividers, and tables are skipped. Display tags are non-system labels, excluding all `content:*`, `draft`, and `blog-post`. Never parse visible or hidden body metadata overrides for posts.
 - `about` and `now` are singleton sections.
-- Detail Slugs are globally unique across posts, projects, notes, and life. They are stable public identities; do not change a published Slug. A blank Slug becomes `issue-<number>`.
+- Structured detail Slugs must not collide with post `issue-<number>` IDs or other detail Slugs. They are stable public identities; do not change a published Slug. A blank structured Slug becomes `issue-<number>`.
 - Supported Markdown is intentionally constrained: headings levels 2–4, paragraphs, emphasis/strong/strikethrough, inline and fenced code, blockquotes, one-level lists, tables, thematic breaks, links using `http`, `https`, or `mailto`, and images using `https`.
 - Raw HTML, task lists, nested lists, unsafe protocols, and non-HTTPS images must continue to fail validation.
 - Content validation failures must not replace the last generated output. CLI `--report-file <path>` writes `{ marker: "snxq-content-validation", errors }` for Issue feedback.
