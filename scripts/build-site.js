@@ -2,6 +2,8 @@ import { cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildAtomFeed } from './build-feed.js';
+
 const deployablePaths = ['CNAME', 'index.html', 'favicon.svg', 'styles.css', 'src', 'generated/content'];
 
 export async function buildStaticSite({ rootDirectory, outputDirectory }) {
@@ -12,6 +14,11 @@ export async function buildStaticSite({ rootDirectory, outputDirectory }) {
       recursive: true
     });
   }
+
+  await buildAtomFeed({
+    contentDirectory: join(outputDirectory, 'generated/content'),
+    outputPath: join(outputDirectory, 'feed.xml')
+  });
 }
 
 const rootDirectory = join(dirname(fileURLToPath(import.meta.url)), '..');

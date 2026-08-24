@@ -13,6 +13,7 @@ const requiredPaths = [
   'styles.css',
   'src/app.js',
   'src/content-api.js',
+  'feed.xml',
   'generated/content/manifest.json'
 ];
 const IMMUTABLE_FILENAME = /^([A-Za-z0-9][A-Za-z0-9_-]*)\.([a-f0-9]{64})\.json$/u;
@@ -77,6 +78,21 @@ async function validateSections(outputDirectory, manifest) {
   }
 }
 
+async function validateFeed(outputDirectory) {
+  const xml = await readFile(join(outputDirectory, 'feed.xml'), 'utf8');
+  const valid = /^<\?xml version="1\.0" encoding="utf-8"\?>/u.test(xml)
+    && xml.includes('<feed xmlns="http://www.w3.org/2005/Atom">')
+    && xml.includes('<link rel="self" type="application/atom+xml" href="https://blog.snxq.cc/feed.xml"></link>')
+    && [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gu)].every(([, entry]) =>
+      /<id>https:\/\/github\.com\/[^<]+<\/id>/u.test(entry)
+      && /<link href="https:\/\/github\.com\/[^"]+"><\/link>/u.test(entry)
+      && /<published>\d{4}-\d{2}-\d{2}T00:00:00Z<\/published>/u.test(entry)
+      && /<updated>[^<]+Z<\/updated>/u.test(entry)
+      && /<content type="html">[\s\S]*<\/content>/u.test(entry)
+    );
+  if (!valid) throw new Error('Static Atom feed is invalid');
+}
+
 export async function checkStaticSite(outputDirectory) {
   const missingPaths = [];
   for (const requiredPath of requiredPaths) {
@@ -92,6 +108,7 @@ export async function checkStaticSite(outputDirectory) {
 
   const manifest = await readManifest(outputDirectory);
   await validateSections(outputDirectory, manifest);
+  await validateFeed(outputDirectory);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
