@@ -9,6 +9,7 @@ import { buildAtomFeed, createAtomXml, renderBlocks } from '../../scripts/build-
 import { buildStaticSite } from '../../scripts/build-site.js';
 import { checkStaticSite } from '../../scripts/check-static-site.js';
 import { buildContent } from '../../scripts/content/build-content.js';
+import { sectionDocumentSchema } from '../../scripts/content/schema.js';
 
 const generatedAt = '2026-07-24T08:00:00.000Z';
 const sectionNames = ['about', 'bookmarks', 'life', 'notes', 'now', 'opensource', 'posts', 'projects', 'uses'];
@@ -172,6 +173,66 @@ test('createAtomXml creates a valid empty feed', () => {
 
   assert.match(xml, /<updated>2026-08-24T08:00:00\.000Z<\/updated>/);
   assert.doesNotMatch(xml, /<entry>/);
+});
+
+test('Posts schema rejects malformed and markup-bearing dates', () => {
+  const document = {
+    version: 1,
+    section: 'posts',
+    title: 'Posts',
+    subtitle: '',
+    updatedAt: '2026-08-24T08:00:00.000Z',
+    data: {
+      items: [{
+        id: 'issue-42',
+        date: '2026-08-20',
+        title: 'Title',
+        summary: '',
+        tags: [],
+        detail: [],
+        source: {
+          issueNumber: 42,
+          issueUrl: 'https://github.com/snxq/snxq.github.io/issues/42',
+          updatedAt: '2026-08-21T02:00:00.000Z'
+        }
+      }]
+    }
+  };
+
+  for (const date of ['2026-02-30', '2026-08-24</published><published>2026-08-25']) {
+    document.data.items[0].date = date;
+    assert.equal(sectionDocumentSchema.safeParse(document).success, false);
+  }
+});
+
+test('createAtomXml rejects XML 1.0 forbidden characters', () => {
+  const document = {
+    version: 1,
+    section: 'posts',
+    title: 'Posts',
+    subtitle: '',
+    updatedAt: '2026-08-24T08:00:00.000Z',
+    data: {
+      items: [{
+        id: 'issue-42',
+        date: '2026-08-20',
+        title: 'Title',
+        summary: '',
+        tags: [],
+        detail: [{ type: 'paragraph', children: [{ type: 'text', value: 'Body' }] }],
+        source: {
+          issueNumber: 42,
+          issueUrl: 'https://github.com/snxq/snxq.github.io/issues/42',
+          updatedAt: '2026-08-21T02:00:00.000Z'
+        }
+      }]
+    }
+  };
+
+  for (const value of ['bad\fvalue', 'bad￾value']) {
+    document.data.items[0].detail[0].children[0].value = value;
+    assert.throws(() => createAtomXml(document), /XML 1\.0/);
+  }
 });
 
 test('buildAtomFeed rejects unsafe or invalid Posts manifest targets', async t => {
