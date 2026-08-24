@@ -12,6 +12,12 @@ const linkUrlSchema = z.string().url().refine(value => {
 
 const imageUrlSchema = z.string().url().refine(value => new URL(value).protocol === 'https:', 'image URL must use https');
 
+export const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).refine(value => {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}, 'must be a valid YYYY-MM-DD calendar date');
+
 const richInlineSchema = z.lazy(() => z.discriminatedUnion('type', [
   z.object({ type: z.literal('text'), value: z.string() }).strict(),
   z.object({ type: z.literal('emphasis'), children: z.array(richInlineSchema) }).strict(),
@@ -68,7 +74,7 @@ const detailSchema = z.array(richBlockSchema);
 const tagsSchema = z.array(z.string());
 
 export const postSchema = z.object({
-  id: z.string().min(1), date: z.string().min(1), title: z.string(), summary: z.string(),
+  id: z.string().min(1), date: calendarDateSchema, title: z.string(), summary: z.string(),
   tags: tagsSchema, detail: detailSchema, source: sourceSchema
 }).strict();
 export const projectSchema = z.object({
