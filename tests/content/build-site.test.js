@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { access, mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -323,11 +323,43 @@ test('buildStaticSite copies only deployable roots', async () => {
   await buildStaticSite({ rootDirectory, outputDirectory });
 
   const entries = (await readdir(outputDirectory)).sort();
-  assert.deepEqual(entries, ['CNAME', 'favicon.svg', 'generated', 'index.html', 'src', 'styles.css']);
+  assert.deepEqual(entries, ['CNAME', 'favicon.svg', 'feed.xml', 'generated', 'index.html', 'src', 'styles.css']);
   assert.equal(await readFile(join(outputDirectory, 'CNAME'), 'utf8'), 'blog.snxq.cc\n');
 
   for (const excludedPath of ['tests', 'docs', '.github', 'node_modules', 'scripts']) {
     await assert.rejects(access(join(outputDirectory, excludedPath)));
   }
   assert.deepEqual(sectionNames.sort(), Object.keys((await readManifest(outputDirectory)).manifest.files).sort());
+});
+
+test('buildStaticSite generates a feed from the published Posts document', async () => {
+  const { outputDirectory } = await builtSite();
+  const xml = await readFile(join(outputDirectory, 'feed.xml'), 'utf8');
+  const { manifest } = await readManifest(outputDirectory);
+  const posts = JSON.parse(await readFile(join(outputDirectory, 'generated/content', manifest.files.posts), 'utf8'));
+
+  assert.match(xml, /<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/);
+  for (const post of posts.data.items) {
+    assert.match(xml, new RegExp(`<id>${post.source.issueUrl.replaceAll('.', '\\.')}<\\/id>`));
+  }
+  assert.equal((xml.match(/<entry>/g) ?? []).length, posts.data.items.length);
+});
+
+test('checkStaticSite rejects a missing or malformed feed', async t => {
+  await t.test('missing', async () => {
+    const { outputDirectory } = await builtSite();
+    await rm(join(outputDirectory, 'feed.xml'));
+    await assert.rejects(checkStaticSite(outputDirectory), /feed\.xml/);
+  });
+
+  await t.test('malformed', async () => {
+    const { outputDirectory } = await builtSite();
+    await writeFile(join(outputDirectory, 'feed.xml'), '<not-atom>');
+    await assert.rejects(checkStaticSite(outputDirectory), /Atom feed.*invalid/i);
+  });
+});
+
+test('index advertises the Atom feed', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /<link rel="alternate" type="application\/atom\+xml" title="snxq\.cc posts" href="feed\.xml">/);
 });
