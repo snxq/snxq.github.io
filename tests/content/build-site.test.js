@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { buildAtomFeed, createAtomXml, renderBlocks } from '../../scripts/build-feed.js';
 import { buildStaticSite } from '../../scripts/build-site.js';
 import { checkStaticSite } from '../../scripts/check-static-site.js';
 import { buildContent } from '../../scripts/content/build-content.js';
@@ -76,6 +77,144 @@ async function replaceSection(outputDirectory, section, mutate) {
   manifest.files[section] = filename;
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
+
+test('renderBlocks serializes supported rich content with escaped values', () => {
+  const html = renderBlocks([
+    { type: 'heading', depth: 2, children: [{ type: 'text', value: 'A < B & C' }] },
+    {
+      type: 'paragraph',
+      children: [
+        { type: 'emphasis', children: [{ type: 'text', value: 'em' }] },
+        { type: 'text', value: ' ' },
+        { type: 'strong', children: [{ type: 'text', value: 'strong' }] },
+        { type: 'text', value: ' ' },
+        { type: 'delete', children: [{ type: 'text', value: 'delete' }] },
+        { type: 'text', value: ' ' },
+        { type: 'inlineCode', value: '<tag>' },
+        { type: 'text', value: ' ' },
+        { type: 'link', href: 'https://example.com/?a=1&b=2', children: [{ type: 'text', value: 'link' }] }
+      ]
+    },
+    { type: 'quote', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'quoted' }] }] },
+    { type: 'code', language: 'js"bad', value: 'const x = "<&";' },
+    {
+      type: 'list', ordered: true, start: 3,
+      items: [[{ type: 'paragraph', children: [{ type: 'text', value: 'item' }] }]]
+    },
+    {
+      type: 'table', align: ['left', 'right'],
+      rows: [
+        [[{ type: 'text', value: 'H1' }], [{ type: 'text', value: 'H2' }]],
+        [[{ type: 'text', value: 'V1' }], [{ type: 'text', value: 'V2' }]]
+      ]
+    },
+    { type: 'image', src: 'https://example.com/a.png?x=1&y=2', alt: 'A "quote"', title: 'T < X' },
+    { type: 'divider' }
+  ]);
+
+  assert.match(html, /<h2>A &lt; B &amp; C<\/h2>/);
+  assert.match(html, /<em>em<\/em> <strong>strong<\/strong> <del>delete<\/del>/);
+  assert.match(html, /<code>&lt;tag&gt;<\/code>/);
+  assert.match(html, /href="https:\/\/example\.com\/\?a=1&amp;b=2"/);
+  assert.match(html, /<blockquote><p>quoted<\/p><\/blockquote>/);
+  assert.match(html, /<pre><code class="language-js&quot;bad">const x = &quot;&lt;&amp;&quot;;<\/code><\/pre>/);
+  assert.match(html, /<ol start="3"><li><p>item<\/p><\/li><\/ol>/);
+  assert.match(html, /<thead>.*<th style="text-align: left">H1<\/th>.*<\/thead>/);
+  assert.match(html, /<tbody>.*<td style="text-align: right">V2<\/td>.*<\/tbody>/);
+  assert.match(html, /src="https:\/\/example\.com\/a\.png\?x=1&amp;y=2"/);
+  assert.match(html, /alt="A &quot;quote&quot;" title="T &lt; X"/);
+  assert.match(html, /<hr>/);
+});
+
+test('createAtomXml uses Issue links, RFC 3339 dates, and XML-escaped complete HTML', () => {
+  const xml = createAtomXml({
+    version: 1,
+    section: 'posts',
+    title: 'Posts',
+    subtitle: 'Published posts',
+    updatedAt: '2026-08-24T08:00:00.000Z',
+    data: {
+      items: [{
+        id: 'issue-42',
+        date: '2026-08-20',
+        title: 'A < B',
+        summary: 'Summary',
+        tags: [],
+        detail: [{ type: 'paragraph', children: [{ type: 'text', value: 'Body & more' }] }],
+        source: {
+          issueNumber: 42,
+          issueUrl: 'https://github.com/snxq/snxq.github.io/issues/42',
+          updatedAt: '2026-08-21T02:00:00.000Z'
+        }
+      }]
+    }
+  });
+
+  assert.match(xml, /^<\?xml version="1\.0" encoding="utf-8"\?>/);
+  assert.match(xml, /<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/);
+  assert.match(xml, /<link rel="self" type="application\/atom\+xml" href="https:\/\/blog\.snxq\.cc\/feed\.xml">/);
+  assert.match(xml, /<id>https:\/\/github\.com\/snxq\/snxq\.github\.io\/issues\/42<\/id>/);
+  assert.match(xml, /<published>2026-08-20T00:00:00Z<\/published>/);
+  assert.match(xml, /<updated>2026-08-21T02:00:00\.000Z<\/updated>/);
+  assert.match(xml, /<title>A &lt; B<\/title>/);
+  assert.match(xml, /<content type="html">&lt;p&gt;Body &amp;amp; more&lt;\/p&gt;<\/content>/);
+});
+
+test('createAtomXml creates a valid empty feed', () => {
+  const xml = createAtomXml({
+    version: 1,
+    section: 'posts',
+    title: 'Posts',
+    subtitle: '',
+    updatedAt: '2026-08-24T08:00:00.000Z',
+    data: { items: [] }
+  });
+
+  assert.match(xml, /<updated>2026-08-24T08:00:00\.000Z<\/updated>/);
+  assert.doesNotMatch(xml, /<entry>/);
+});
+
+test('buildAtomFeed rejects unsafe or invalid Posts manifest targets', async t => {
+  for (const variant of ['traversal', 'hash', 'section']) {
+    await t.test(variant, async () => {
+      const { rootDirectory, outputDirectory } = await createSourceSite();
+      const contentDirectory = join(rootDirectory, 'generated', 'content');
+      const { manifestPath, manifest } = await readManifest(rootDirectory);
+
+      if (variant === 'traversal') {
+        manifest.files.posts = '../posts.json';
+        await writeFile(manifestPath, JSON.stringify(manifest));
+        await assert.rejects(
+          buildAtomFeed({ contentDirectory, outputPath: join(outputDirectory, 'feed.xml') }),
+          /filename.*invalid/i
+        );
+        return;
+      }
+
+      const original = join(contentDirectory, manifest.files.posts);
+      if (variant === 'hash') {
+        await writeFile(original, `${await readFile(original, 'utf8')} `);
+        await assert.rejects(
+          buildAtomFeed({ contentDirectory, outputPath: join(outputDirectory, 'feed.xml') }),
+          /hash/i
+        );
+        return;
+      }
+
+      const projects = JSON.parse(await readFile(join(contentDirectory, manifest.files.projects), 'utf8'));
+      const bytes = `${JSON.stringify(projects, null, 2)}\n`;
+      const hash = createHash('sha256').update(bytes).digest('hex');
+      const filename = `posts.${hash}.json`;
+      await writeFile(join(contentDirectory, filename), bytes);
+      manifest.files.posts = filename;
+      await writeFile(manifestPath, JSON.stringify(manifest));
+      await assert.rejects(
+        buildAtomFeed({ contentDirectory, outputPath: join(outputDirectory, 'feed.xml') }),
+        /posts section/i
+      );
+    });
+  }
+});
 
 test('checkStaticSite reports each missing required path', async () => {
   const outputDirectory = await mkdtemp(join(tmpdir(), 'static-site-missing-'));
