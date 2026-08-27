@@ -20,22 +20,22 @@ function crc32(bytes) {
 
 const fail = message => { throw new Error(`WeChat QR Code URL: ${message}`); };
 
-function safeUrl(url) {
-  return url.protocol === 'https:' && !url.username && !url.password && !url.port && !url.search && !url.hash;
+function safeAuthority(url) {
+  return url.protocol === 'https:' && !url.username && !url.password && !url.port && !url.hash;
 }
 
 export function validateSourceUrl(value) {
   let url;
   try { url = new URL(value); } catch { fail('must be a valid GitHub user attachment URL'); }
-  if (!safeUrl(url) || url.hostname !== 'github.com' || !SOURCE_PATH.test(url.pathname)) {
+  if (!safeAuthority(url) || url.search || url.hostname !== 'github.com' || !SOURCE_PATH.test(url.pathname)) {
     fail('must be https://github.com/user-attachments/assets/<uuid> without credentials, port, query, or fragment');
   }
   return url;
 }
 
 function allowedRedirect(url) {
-  if (!safeUrl(url)) return false;
-  if (url.hostname === 'github.com') return SOURCE_PATH.test(url.pathname);
+  if (!safeAuthority(url)) return false;
+  if (url.hostname === 'github.com') return !url.search && SOURCE_PATH.test(url.pathname);
   return GITHUB_ASSET_HOST.test(url.hostname) && url.pathname.length > 1;
 }
 
