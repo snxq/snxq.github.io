@@ -423,6 +423,22 @@ test('checkStaticSite rejects an invalid About QR asset', async t => {
     await writeFile(join(outputDirectory, about.data.wechatQrCodeUrl.slice(1)), 'not the hashed PNG');
     await assert.rejects(checkStaticSite(outputDirectory), /QR asset.*invalid/i);
   });
+
+  await t.test('malformed PNG with matching hash', async () => {
+    const { outputDirectory } = await builtSite();
+    const malformed = Buffer.from('not a PNG');
+    const hash = createHash('sha256').update(malformed).digest('hex');
+    const assetPath = `/generated/content/assets/wechat-qr.${hash}.png`;
+    await writeFile(join(outputDirectory, assetPath.slice(1)), malformed);
+    await replaceSection(outputDirectory, 'about', document => {
+      document.data.wechatQrCodeUrl = assetPath;
+    });
+
+    await assert.rejects(
+      checkStaticSite(outputDirectory),
+      error => /QR asset.*invalid/i.test(error.message) && /valid PNG/i.test(error.cause?.message)
+    );
+  });
 });
 
 test('checkStaticSite rejects a missing or malformed feed', async t => {
