@@ -14,6 +14,10 @@ const generatedImagePathSchema = z.string().regex(
   /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u,
   'image path must be a generated content asset'
 );
+const githubAttachmentSchema = z.string().regex(
+  /^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu,
+  'must be a GitHub user attachment URL'
+);
 const imageUrlSchema = z.string().url().refine(value => {
   try { return new URL(value).protocol === 'https:'; } catch { return false; }
 }, 'image URL must use https');
@@ -96,10 +100,10 @@ export const bookmarkEntrySchema = z.object({ name: z.string(), description: z.s
 export const useEntrySchema = z.object({ name: z.string(), description: z.string(), url: linkUrlSchema.nullable(), source: sourceSchema }).strict();
 export const openSourceSchema = z.object({ year: z.string(), title: z.string(), text: z.string(), tags: tagsSchema, url: linkUrlSchema.nullable(), source: sourceSchema }).strict();
 
-const aboutSchema = z.object({
+const aboutSchema = wechatQrCodeUrl => z.object({
   name: z.string(), role: z.string(), bio: z.string(), location: z.string(), status: z.string(),
   fields: z.array(z.string()), links: z.array(z.tuple([z.string(), linkUrlSchema])),
-  wechatQrCodeUrl: z.union([imageUrlSchema, generatedImagePathSchema]).nullable().optional()
+  wechatQrCodeUrl
 }).strict();
 const nowSchema = z.object({
   summary: z.string(),
@@ -111,8 +115,20 @@ const sectionEnvelope = (section, data) => z.object({
   updatedAt: z.string().datetime({ offset: true }), data
 }).strict();
 
+export const buildSectionDocumentSchema = z.discriminatedUnion('section', [
+  sectionEnvelope('about', aboutSchema(githubAttachmentSchema.nullable().optional())),
+  sectionEnvelope('now', nowSchema),
+  sectionEnvelope('posts', z.object({ items: z.array(postSchema) }).strict()),
+  sectionEnvelope('projects', z.object({ items: z.array(projectSchema) }).strict()),
+  sectionEnvelope('notes', z.object({ items: z.array(noteSchema) }).strict()),
+  sectionEnvelope('life', z.object({ items: z.array(lifeSchema) }).strict()),
+  sectionEnvelope('bookmarks', z.object({ groups: z.array(z.object({ name: z.string(), description: z.string(), links: z.array(bookmarkEntrySchema) }).strict()) }).strict()),
+  sectionEnvelope('uses', z.object({ categories: z.array(z.object({ name: z.string(), items: z.array(useEntrySchema) }).strict()) }).strict()),
+  sectionEnvelope('opensource', z.object({ contributions: z.array(openSourceSchema) }).strict())
+]);
+
 export const sectionDocumentSchema = z.discriminatedUnion('section', [
-  sectionEnvelope('about', aboutSchema),
+  sectionEnvelope('about', aboutSchema(generatedImagePathSchema.nullable().optional())),
   sectionEnvelope('now', nowSchema),
   sectionEnvelope('posts', z.object({ items: z.array(postSchema) }).strict()),
   sectionEnvelope('projects', z.object({ items: z.array(projectSchema) }).strict()),

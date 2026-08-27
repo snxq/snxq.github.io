@@ -72,7 +72,7 @@ export function validateAssetPath(bytes, value) {
 export async function fetchQrPng(value, { fetchImpl = fetch, maxRedirects = 3 } = {}) {
   let url = validateSourceUrl(value);
   for (let redirects = 0; ; redirects += 1) {
-    const response = await fetchImpl(url, { redirect: 'manual' });
+    const response = await fetchImpl(url, { redirect: 'manual', headers: {} });
     if (response.status >= 300 && response.status < 400) {
       if (redirects >= maxRedirects) fail('too many redirects');
       const location = response.headers.get('location');

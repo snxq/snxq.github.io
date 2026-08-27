@@ -10,7 +10,7 @@ import { fetchAllIssues, fetchIssuesWithGh } from './fetch-issues.js';
 import { normalizeIssue, validateCrossContent } from './normalize.js';
 import { materializeContentAssets } from './qr-asset.js';
 import { parseFormBody } from './parse-form.js';
-import { manifestSchema, sectionDocumentSchema } from './schema.js';
+import { buildSectionDocumentSchema, manifestSchema, sectionDocumentSchema } from './schema.js';
 import { classifyIssues } from './validate.js';
 
 const SECTION_NAMES = Object.freeze(Object.keys(SECTION_META));
@@ -212,7 +212,7 @@ export function buildDocuments({ issues, repository, generatedAt }) {
       data: sectionData(section, sectionRecords)
     };
     sections[section] = validated(
-      sectionDocumentSchema,
+      buildSectionDocumentSchema,
       document,
       sectionRecords[0]?.issue,
       `${section}.json`,
@@ -274,6 +274,16 @@ function safeWarn(warn, message) {
   }
 }
 
+function qrValidationError(issue, error) {
+  return new ContentValidationError([{
+    issueNumber: issue?.number ?? 0,
+    title: issue?.title ?? 'About',
+    field: 'WeChat QR Code URL',
+    reason: formatThrown(error),
+    url: issue?.html_url ?? 'https://github.com/'
+  }]);
+}
+
 async function writeAsset(temporary, asset) {
   const filename = path.basename(asset.path);
   const directory = path.join(temporary, 'assets');
@@ -283,6 +293,7 @@ async function writeAsset(temporary, asset) {
 
 async function writeDocumentsAtomically(output, documents, {
   assets = [],
+  writeAssetImpl = writeAsset,
   cleanupBackup = value => rm(value, { recursive: true, force: true }),
   cleanupTemporary = value => rm(value, { recursive: true, force: true }),
   warn = console.warn,
@@ -316,13 +327,16 @@ async function writeDocumentsAtomically(output, documents, {
         context.resolveIssue
       )];
     }));
-    const writes = [
+    try {
+      await Promise.all(assets.map(asset => writeAssetImpl(temporary, asset)));
+    } catch (error) {
+      throw qrValidationError(documents.records.find(record => record.section === 'about')?.issue, error);
+    }
+    await Promise.all([
       writeFile(path.join(temporary, 'manifest.json'), serializedDocument(manifest)),
       ...Object.entries(sections).map(([section, document]) =>
-        writeFile(path.join(temporary, manifest.files[section]), serializedDocument(document))),
-      ...assets.map(asset => writeAsset(temporary, asset))
-    ];
-    await Promise.all(writes);
+        writeFile(path.join(temporary, manifest.files[section]), serializedDocument(document)))
+    ]);
 
     const hadOutput = await pathExists(output);
     if (hadOutput) await rename(output, backup);
@@ -404,14 +418,15 @@ export async function buildContent(options) {
     });
   } catch (error) {
     const about = documents.records.find(record => record.section === 'about')?.issue;
-    throw structuralValidationError(about ?? { number: 0, title: 'About', html_url: 'https://github.com/' }, error);
+    throw qrValidationError(about, error);
   }
   await writeDocumentsAtomically(options.output, documents, {
     assets,
     cleanupBackup: options.cleanupBackup,
     cleanupTemporary: options.cleanupTemporary,
     warn: options.warn,
-    beforeFinalValidation: options.beforeFinalValidation
+    beforeFinalValidation: options.beforeFinalValidation,
+    writeAssetImpl: options.writeAssetImpl
   });
   return { ...documents, output: options.output };
 }
