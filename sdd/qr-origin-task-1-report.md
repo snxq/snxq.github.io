@@ -5,8 +5,8 @@
 
 ## Red/Green evidence
 - 初始聚焦测试在 `qr-asset.js` 不存在时失败；依赖安装后新增 QR 测试按预期暴露缺失实现。
-- `node --test tests/content/build-content.test.js tests/content/markdown.test.js`：27 passed。
-- `npm test`：121 passed，0 failed。
+- `node --test tests/content/build-content.test.js tests/content/markdown.test.js`：28 passed。
+- `npm test`：122 passed，0 failed。
 - `npm run content:build:fixture`、`npm run site:build`、`npm run site:check`：全部通过。
 - `git diff --check`：通过。
 
@@ -22,4 +22,4 @@
 - production source without fixture assets downloads validated URL; fixture source with non-empty QR and missing assets fails before replacement as `ContentValidationError`。
 
 ## Commit
-`3094fc2c1c0f715c275789e370d0f0e77009edb1`（实现提交；报告哈希更新另有后续提交）
+当前可访问的 review 修复提交：`283a8a3649ae4f75f6dedf53870ced6135620847`；本轮 missing-fixture 回归测试提交见后续 commit。

@@ -362,6 +362,33 @@ test('requires fixture assets for a non-empty QR and preserves previous output',
   );
   assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
 });
+test('does not use the network when an explicit fixture asset is missing', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
+  const output = path.join(root, 'content');
+  const emptyAssets = path.join(root, 'assets');
+  await mkdir(output);
+  await mkdir(emptyAssets);
+  await writeFile(path.join(output, 'sentinel.txt'), 'previous');
+  let fetchCalls = 0;
+
+  await assert.rejects(buildContent({
+    source: 'fixture',
+    fixtures: new URL('../fixtures/issues/valid.json', import.meta.url).pathname,
+    assetFixtures: emptyAssets,
+    fetchImpl: async () => { fetchCalls += 1; throw new Error('network must not run'); },
+    output,
+    repository: 'snxq/snxq.cc',
+    generatedAt
+  }), error => {
+    assert.equal(error instanceof ContentValidationError, true);
+    assert.equal(error.entries[0].field, 'WeChat QR Code URL');
+    assert.match(error.entries[0].title, /about/i);
+    assert.match(error.entries[0].url, /issues\//u);
+    return true;
+  });
+  assert.equal(fetchCalls, 0);
+  assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
+});
 test('attributes QR download validation to the About Issue and preserves output', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
   const output = path.join(root, 'content');
