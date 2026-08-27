@@ -24,4 +24,4 @@
 - production source without fixture assets downloads validated URL; fixture source with non-empty QR and missing assets fails before replacement as `ContentValidationError`。
 
 ## Commit
-`c3f72c59c0af07de6166e19d21299d915afdcd6f`
+`3094fc2c1c0f715c275789e370d0f0e77009edb1`（实现提交；报告哈希更新另有后续提交）
