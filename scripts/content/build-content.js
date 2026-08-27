@@ -8,6 +8,7 @@ import { CONTENT_SCHEMA_VERSION, CONTENT_TYPES, FORM_FIELDS, SECTION_META } from
 import { ContentValidationError } from './errors.js';
 import { fetchAllIssues, fetchIssuesWithGh } from './fetch-issues.js';
 import { normalizeIssue, validateCrossContent } from './normalize.js';
+import { materializeContentAssets } from './qr-asset.js';
 import { parseFormBody } from './parse-form.js';
 import { manifestSchema, sectionDocumentSchema } from './schema.js';
 import { classifyIssues } from './validate.js';
@@ -229,6 +230,7 @@ export function buildDocuments({ issues, repository, generatedAt }) {
   }, published[0], 'manifest.json');
 
   const documents = { manifest, sections };
+  Object.defineProperty(documents, 'records', { value: records, enumerable: false });
   Object.defineProperty(documents, 'validation', {
     value: {
       manifest: { fallbackIssue: published[0] },
@@ -272,7 +274,15 @@ function safeWarn(warn, message) {
   }
 }
 
+async function writeAsset(temporary, asset) {
+  const filename = path.basename(asset.path);
+  const directory = path.join(temporary, 'assets');
+  await mkdir(directory, { recursive: true });
+  await writeFile(path.join(directory, filename), asset.bytes);
+}
+
 async function writeDocumentsAtomically(output, documents, {
+  assets = [],
   cleanupBackup = value => rm(value, { recursive: true, force: true }),
   cleanupTemporary = value => rm(value, { recursive: true, force: true }),
   warn = console.warn,
@@ -309,7 +319,8 @@ async function writeDocumentsAtomically(output, documents, {
     const writes = [
       writeFile(path.join(temporary, 'manifest.json'), serializedDocument(manifest)),
       ...Object.entries(sections).map(([section, document]) =>
-        writeFile(path.join(temporary, manifest.files[section]), serializedDocument(document)))
+        writeFile(path.join(temporary, manifest.files[section]), serializedDocument(document))),
+      ...assets.map(asset => writeAsset(temporary, asset))
     ];
     await Promise.all(writes);
 
@@ -373,7 +384,30 @@ export async function buildContent(options) {
   }
 
   const documents = buildDocuments({ issues, repository, generatedAt });
+  const aboutRecord = documents.records.find(record => record.section === 'about');
+  if (source === 'fixture' && aboutRecord?.item.wechatQrCodeUrl && !options.assetFixtures) {
+    throw new ContentValidationError([{
+      issueNumber: aboutRecord.issue.number,
+      title: aboutRecord.issue.title,
+      field: 'WeChat QR Code URL',
+      reason: 'Fixture builds with a WeChat QR Code URL require --asset-fixtures',
+      url: aboutRecord.issue.html_url
+    }]);
+  }
+  let assets;
+  try {
+    assets = await materializeContentAssets({
+      documents,
+      records: documents.records,
+      assetFixtures: options.assetFixtures,
+      fetchImpl: options.assetFetchImpl ?? options.fetchImpl
+    });
+  } catch (error) {
+    const about = documents.records.find(record => record.section === 'about')?.issue;
+    throw structuralValidationError(about ?? { number: 0, title: 'About', html_url: 'https://github.com/' }, error);
+  }
   await writeDocumentsAtomically(options.output, documents, {
+    assets,
     cleanupBackup: options.cleanupBackup,
     cleanupTemporary: options.cleanupTemporary,
     warn: options.warn,
@@ -396,6 +430,7 @@ function parseArguments(argv) {
   return {
     source: options.source,
     fixtures: options.fixtures,
+    assetFixtures: options['asset-fixtures'],
     output: options.output,
     repository: options.repository,
     generatedAt: options['generated-at'],

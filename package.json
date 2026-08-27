@@ -7,7 +7,7 @@
     "test": "node --test tests/*.test.js tests/content/*.test.js",
     "serve": "python -m http.server 4173",
     "content:build": "node scripts/content/build-content.js --source gh --output generated/content",
-    "content:build:fixture": "node scripts/content/build-content.js --source fixture --fixtures tests/fixtures/issues --output generated/content --repository fixture/content",
+    "content:build:fixture": "node scripts/content/build-content.js --source fixture --fixtures tests/fixtures/issues --asset-fixtures tests/fixtures/assets --output generated/content --repository fixture/content",
     "site:build": "node scripts/build-site.js",
     "site:check": "node scripts/check-static-site.js",
     "dev": "npm run content:build:fixture && npm run serve"

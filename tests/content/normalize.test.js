@@ -163,14 +163,14 @@ test('normalizes about newline fields, links, and optional WeChat QR code', () =
   const about = normalizeIssue(issue(10, '[about] Profile'), 'about', {
     'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: 'UTC+8', Status: 'building',
     Fields: 'Software\n\nDesign', Links: 'GitHub | https://github.com/snxq\nEmail | mailto:hi@example.com',
-    'WeChat QR Code URL': 'https://github.com/user-attachments/assets/qr-code'
+    'WeChat QR Code URL': 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000'
   });
   assert.deepEqual(about.fields, ['Software', 'Design']);
   assert.deepEqual(about.links, [
     ['GitHub', 'https://github.com/snxq'],
     ['Email', 'mailto:hi@example.com']
   ]);
-  assert.equal(about.wechatQrCodeUrl, 'https://github.com/user-attachments/assets/qr-code');
+  assert.equal(about.wechatQrCodeUrl, 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000');
 
   const withoutQrCode = normalizeIssue(issue(11, '[about] Profile'), 'about', {
     'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '',
