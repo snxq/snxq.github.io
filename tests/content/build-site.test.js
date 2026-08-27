@@ -407,6 +407,24 @@ test('buildStaticSite generates a feed from the published Posts document', async
   assert.equal((xml.match(/<entry>/g) ?? []).length, posts.data.items.length);
 });
 
+test('checkStaticSite rejects an invalid About QR asset', async t => {
+  await t.test('missing', async () => {
+    const { outputDirectory } = await builtSite();
+    const { manifest } = await readManifest(outputDirectory);
+    const about = JSON.parse(await readFile(join(outputDirectory, 'generated/content', manifest.files.about), 'utf8'));
+    await rm(join(outputDirectory, about.data.wechatQrCodeUrl.slice(1)));
+    await assert.rejects(checkStaticSite(outputDirectory), /wechat-qr|missing required path/i);
+  });
+
+  await t.test('hash mismatch', async () => {
+    const { outputDirectory } = await builtSite();
+    const { manifest } = await readManifest(outputDirectory);
+    const about = JSON.parse(await readFile(join(outputDirectory, 'generated/content', manifest.files.about), 'utf8'));
+    await writeFile(join(outputDirectory, about.data.wechatQrCodeUrl.slice(1)), 'not the hashed PNG');
+    await assert.rejects(checkStaticSite(outputDirectory), /QR asset.*invalid/i);
+  });
+});
+
 test('checkStaticSite rejects a missing or malformed feed', async t => {
   await t.test('missing', async () => {
     const { outputDirectory } = await builtSite();
