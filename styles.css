@@ -170,6 +170,13 @@ button.content-card { width: 100%; text-align: left; cursor: pointer; }
 .fact strong { color: var(--paper-faint); font: 400 8px/1.5 var(--mono); letter-spacing: .14em; }
 .link-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .text-link { text-decoration: none; border-bottom: 1px solid var(--rust); color: var(--paper-dim); font: 400 10px/1.5 var(--mono); }
+.wechat-card { display: flex; align-items: center; gap: 18px; width: fit-content; margin-top: 24px; padding: 14px; border: 1px solid var(--line); background: rgba(233,224,206,.018); }
+.wechat-card[hidden] { display: none; }
+.wechat-qr { display: block; width: 112px; height: 112px; object-fit: contain; background: #fff; }
+.wechat-copy { display: grid; gap: 7px; min-width: 110px; }
+.wechat-copy strong { font-size: 15px; font-weight: 500; }
+.wechat-copy span { color: var(--paper-dim); font-size: 12px; }
+.wechat-copy small { color: var(--rust); font: 400 8px/1.4 var(--mono); letter-spacing: .14em; }
 
 .command-ledger { border-top: 1px solid var(--line-strong); }
 .command-row { display: grid; grid-template-columns: minmax(130px,.35fr) 1fr auto; gap: 25px; padding: 18px 0; border-bottom: 1px solid var(--line); align-items: center; }
@@ -298,6 +305,8 @@ img.image-field { display: block; width: 100%; min-height: 220px; padding: 0; ob
   .window-footer { padding: 0 14px; }
   .content-grid, .now-grid, .life-grid, .identity { grid-template-columns: 1fr; }
   .identity-monogram { max-width: 280px; }
+  .wechat-card { width: 100%; flex-direction: column; text-align: center; }
+  .wechat-copy { justify-items: center; }
   .command-row { grid-template-columns: 90px 1fr auto; gap: 12px; }
   .group-head, .bookmark, .inventory-category, .inventory-item { grid-template-columns: 1fr; gap: 8px; }
   .bookmark { padding: 20px 0; }
