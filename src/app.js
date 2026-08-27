@@ -184,14 +184,13 @@ function renderHelp(data) {
 }
 
 function wechatQrCard(url) {
-  const resolved = safeHref(url, ['https:']);
-  if (!resolved) return null;
+  if (typeof url !== 'string' || !/^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u.test(url)) return null;
 
   const card = el('div', { className: 'wechat-card' });
   const image = el('img', {
     className: 'wechat-qr',
     attrs: {
-      src: resolved,
+      src: url,
       alt: '深夜旅行微信公众号二维码',
       loading: 'lazy',
       decoding: 'async'
