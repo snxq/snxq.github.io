@@ -133,6 +133,25 @@ test('rejects a quoted nested list inside a list item', () => {
   assert.throws(() => markdownToBlocks('- parent\n\n  > - child', context), /nested lists are not allowed/);
 });
 
+test('About schema accepts optional HTTPS WeChat QR code URLs only', () => {
+  const base = {
+    name: 'snxq', role: 'builder', bio: 'Bio', location: '', status: '', fields: [], links: []
+  };
+  const envelope = data => ({
+    version: 1,
+    section: 'about',
+    title: '关于',
+    subtitle: 'IDENTITY SHEET',
+    updatedAt: '2026-08-27T00:00:00Z',
+    data
+  });
+
+  assert.equal(sectionDocumentSchema.safeParse(envelope(base)).success, true);
+  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: null })).success, true);
+  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'https://example.com/qr.png' })).success, true);
+  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'http://example.com/qr.png' })).success, false);
+});
+
 test('validates strict versioned section envelopes and manifests with Zod', () => {
   const posts = {
     version: 1,

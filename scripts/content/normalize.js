@@ -264,7 +264,10 @@ export function normalizeIssue(issue, section, fields) {
         location: optional(fields, 'Location'),
         status: optional(fields, 'Status'),
         fields: lines(optional(fields, 'Fields')),
-        links: normalizeLinks(issue, optional(fields, 'Links'))
+        links: normalizeLinks(issue, optional(fields, 'Links')),
+        wechatQrCodeUrl: url(issue, 'WeChat QR Code URL', optional(fields, 'WeChat QR Code URL'), {
+          protocols: new Set(['https:'])
+        })
       };
     case 'now':
       return {

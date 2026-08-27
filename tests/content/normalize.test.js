@@ -159,24 +159,47 @@ test('derives note text from paragraphs and inline formatting only', () => {
   );
 });
 
-test('normalizes about newline fields, Label | URL links, and now lists', () => {
+test('normalizes about newline fields, links, and optional WeChat QR code', () => {
   const about = normalizeIssue(issue(10, '[about] Profile'), 'about', {
     'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: 'UTC+8', Status: 'building',
-    Fields: 'Software\n\nDesign', Links: 'GitHub | https://github.com/snxq\nEmail | mailto:hi@example.com'
+    Fields: 'Software\n\nDesign', Links: 'GitHub | https://github.com/snxq\nEmail | mailto:hi@example.com',
+    'WeChat QR Code URL': 'https://github.com/user-attachments/assets/qr-code'
   });
   assert.deepEqual(about.fields, ['Software', 'Design']);
   assert.deepEqual(about.links, [
     ['GitHub', 'https://github.com/snxq'],
     ['Email', 'mailto:hi@example.com']
   ]);
+  assert.equal(about.wechatQrCodeUrl, 'https://github.com/user-attachments/assets/qr-code');
+
+  const withoutQrCode = normalizeIssue(issue(11, '[about] Profile'), 'about', {
+    'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '',
+    Fields: '', Links: '', 'WeChat QR Code URL': ''
+  });
+  assert.equal(withoutQrCode.wechatQrCodeUrl, null);
+
+  for (const value of ['http://example.com/qr.png', 'not-a-url']) {
+    assert.throws(
+      () => normalizeIssue(issue(12, '[about] Profile'), 'about', {
+        'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '',
+        Fields: '', Links: '', 'WeChat QR Code URL': value
+      }),
+      /WeChat QR Code URL/
+    );
+  }
+});
+
+test('rejects malformed About links', () => {
   assert.throws(
     () => normalizeIssue(issue(10, '[about] Profile'), 'about', {
       'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '', Fields: '',
-      Links: 'broken entry'
+      Links: 'broken entry', 'WeChat QR Code URL': ''
     }),
     /Links/
   );
+});
 
+test('normalizes now lists', () => {
   const now = normalizeIssue(issue(11, '[now] Current'), 'now', {
     Summary: 'Current summary', BUILD: 'One\nTwo', LEARN: '', READ: 'Book', LOOP: 'Rain'
   });

@@ -92,7 +92,8 @@ export const openSourceSchema = z.object({ year: z.string(), title: z.string(), 
 
 const aboutSchema = z.object({
   name: z.string(), role: z.string(), bio: z.string(), location: z.string(), status: z.string(),
-  fields: z.array(z.string()), links: z.array(z.tuple([z.string(), linkUrlSchema]))
+  fields: z.array(z.string()), links: z.array(z.tuple([z.string(), linkUrlSchema])),
+  wechatQrCodeUrl: imageUrlSchema.nullable().optional()
 }).strict();
 const nowSchema = z.object({
   summary: z.string(),
