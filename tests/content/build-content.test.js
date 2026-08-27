@@ -31,6 +31,8 @@ test('validates QR source URL and rejects unsafe variants', () => {
     'http://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
     'https://evil.example/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
     'https://github.com/user-attachments/assets/not-a-uuid',
+    'https://github.com:444/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://user:pass@github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
     'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000?raw=1',
     'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000/extra'
   ]) {
@@ -85,9 +87,16 @@ test('rejects redirect and response size limit violations', async () => {
   const url = 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000';
   const redirect = () => new Response(null, { status: 302, headers: { location: url } });
   await assert.rejects(fetchQrPng(url, { fetchImpl: async () => redirect() }), /too many redirects/i);
-  await assert.rejects(fetchQrPng(url, {
-    fetchImpl: async () => new Response(null, { status: 302, headers: { location: 'http://github.com/file.png' } })
-  }), /redirect host/i);
+  for (const location of [
+    'http://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://github.com/arbitrary',
+    'https://user:pass@github-production-user-asset-6210df.s3.amazonaws.com/file.png',
+    'https://github-production-user-asset-6210df.s3.amazonaws.com:444/file.png'
+  ]) {
+    await assert.rejects(fetchQrPng(url, {
+      fetchImpl: async () => new Response(null, { status: 302, headers: { location } })
+    }), /redirect host/i);
+  }
   await assert.rejects(fetchQrPng(url, {
     fetchImpl: async () => new Response(null, { status: 200, headers: {
       'content-type': 'image/png', 'content-length': String(1024 * 1024 + 1)
@@ -98,6 +107,20 @@ test('rejects redirect and response size limit violations', async () => {
       status: 200, headers: { 'content-type': 'image/png' }
     })
   }), /1 MiB/i);
+  for (const length of ['-1', '1.5', 'NaN', '999999999999999999999']) {
+    await assert.rejects(fetchQrPng(url, {
+      fetchImpl: async () => new Response('x', { status: 200, headers: {
+        'content-type': 'image/png', 'content-length': length
+      } })
+    }), /Content-Length/i);
+  }
+  for (const length of ['1', '100']) {
+    await assert.rejects(fetchQrPng(url, {
+      fetchImpl: async () => new Response('xx', { status: 200, headers: {
+        'content-type': 'image/png', 'content-length': length
+      } })
+    }), /Content-Length.*match/i);
+  }
 });
 
 test('rejects malformed PNG metadata variants', async () => {
@@ -107,7 +130,12 @@ test('rejects malformed PNG metadata variants', async () => {
     ['IHDR', bytes => { bytes[12] = 0; }],
     ['square', bytes => { new DataView(bytes.buffer).setUint32(20, 3); }],
     ['zero', bytes => { new DataView(bytes.buffer).setUint32(16, 0); }],
-    ['maximum', bytes => { new DataView(bytes.buffer).setUint32(16, 2049); new DataView(bytes.buffer).setUint32(20, 2049); }]
+    ['maximum', bytes => { new DataView(bytes.buffer).setUint32(16, 2049); new DataView(bytes.buffer).setUint32(20, 2049); }],
+    ['CRC', bytes => { bytes[29] ^= 1; }],
+    ['semantic', bytes => { bytes[24] = 4; }],
+    ['compression', bytes => { bytes[26] = 1; }],
+    ['filter', bytes => { bytes[27] = 1; }],
+    ['interlace', bytes => { bytes[28] = 2; }]
   ];
   for (const [name, mutate] of variants) {
     const bytes = valid.slice();
