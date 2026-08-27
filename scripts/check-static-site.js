@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { manifestSchema, sectionDocumentSchema } from './content/schema.js';
+import { validateAssetPath, validatePng } from './content/qr-asset.js';
 
 const SECTION_NAMES = Object.freeze([
   'about', 'bookmarks', 'life', 'notes', 'now', 'opensource', 'posts', 'projects', 'uses'
@@ -46,6 +47,7 @@ async function readManifest(outputDirectory) {
 
 async function validateSections(outputDirectory, manifest) {
   const contentDirectory = join(outputDirectory, 'generated/content');
+  let about;
   for (const section of SECTION_NAMES) {
     const filename = manifest.files[section];
     const match = typeof filename === 'string' ? filename.match(IMMUTABLE_FILENAME) : null;
@@ -75,6 +77,27 @@ async function validateSections(outputDirectory, manifest) {
     if (!result.success || document.version !== 1 || document.section !== section) {
       throw new Error(`Static content section ${section} is invalid`);
     }
+    if (section === 'about') about = result.data;
+  }
+  return about;
+}
+
+async function validateAboutAsset(outputDirectory, about) {
+  const assetPath = about?.data.wechatQrCodeUrl;
+  if (!assetPath) return;
+  const filePath = join(outputDirectory, assetPath.slice(1));
+  let bytes;
+  try {
+    bytes = await readFile(filePath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') throw new Error(`Static site is missing required path:\n${assetPath.slice(1)}`);
+    throw error;
+  }
+  try {
+    validateAssetPath(bytes, assetPath);
+    validatePng(bytes, 'image/png');
+  } catch (error) {
+    throw new Error('Static About WeChat QR asset is invalid', { cause: error });
   }
 }
 
@@ -107,7 +130,8 @@ export async function checkStaticSite(outputDirectory) {
   }
 
   const manifest = await readManifest(outputDirectory);
-  await validateSections(outputDirectory, manifest);
+  const about = await validateSections(outputDirectory, manifest);
+  await validateAboutAsset(outputDirectory, about);
   await validateFeed(outputDirectory);
 }
 
