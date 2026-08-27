@@ -46,7 +46,8 @@ async function createSourceSite() {
     fixtures: new URL('../fixtures/issues/valid.json', import.meta.url).pathname,
     output: join(rootDirectory, 'generated', 'content'),
     repository: 'fixture/content',
-    generatedAt
+    generatedAt,
+    assetFixtures: new URL('../fixtures/assets', import.meta.url).pathname
   });
 
   return { rootDirectory, outputDirectory };

@@ -10,7 +10,13 @@ const linkUrlSchema = z.string().url().refine(value => {
   return protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:';
 }, 'URL protocol is not allowed');
 
-const imageUrlSchema = z.string().url().refine(value => new URL(value).protocol === 'https:', 'image URL must use https');
+const generatedImagePathSchema = z.string().regex(
+  /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u,
+  'image path must be a generated content asset'
+);
+const imageUrlSchema = z.string().url().refine(value => {
+  try { return new URL(value).protocol === 'https:'; } catch { return false; }
+}, 'image URL must use https');
 
 export const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).refine(value => {
   const [year, month, day] = value.split('-').map(Number);
@@ -93,7 +99,7 @@ export const openSourceSchema = z.object({ year: z.string(), title: z.string(), 
 const aboutSchema = z.object({
   name: z.string(), role: z.string(), bio: z.string(), location: z.string(), status: z.string(),
   fields: z.array(z.string()), links: z.array(z.tuple([z.string(), linkUrlSchema])),
-  wechatQrCodeUrl: imageUrlSchema.nullable().optional()
+  wechatQrCodeUrl: z.union([imageUrlSchema, generatedImagePathSchema]).nullable().optional()
 }).strict();
 const nowSchema = z.object({
   summary: z.string(),

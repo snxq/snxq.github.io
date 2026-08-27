@@ -8,13 +8,92 @@ import path from 'node:path';
 import { buildContent, buildDocuments } from '../../scripts/content/build-content.js';
 import { ContentValidationError } from '../../scripts/content/errors.js';
 import { manifestSchema, sectionDocumentSchema } from '../../scripts/content/schema.js';
+import {
+  fetchQrPng,
+  materializeAboutAsset,
+  validateSourceUrl
+} from '../../scripts/content/qr-asset.js';
 
 const generatedAt = '2026-07-24T08:00:00.000Z';
+const assetFixtures = new URL('../fixtures/assets', import.meta.url).pathname;
 
 async function fixtureIssues(name = 'valid.json') {
   return JSON.parse(await readFile(new URL(`../fixtures/issues/${name}`, import.meta.url), 'utf8'));
 }
 
+test('validates QR source URL and rejects unsafe variants', () => {
+  assert.equal(
+    validateSourceUrl('https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000').hostname,
+    'github.com'
+  );
+  for (const value of [
+    'http://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://evil.example/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://github.com/user-attachments/assets/not-a-uuid',
+    'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000?raw=1',
+    'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000/extra'
+  ]) {
+    assert.throws(() => validateSourceUrl(value), /WeChat QR Code URL|GitHub user attachment/i);
+  }
+});
+
+test('downloads one allowed redirect and validates PNG metadata', async () => {
+  const bytes = await readFile(new URL('../fixtures/assets/wechat-qr.png', import.meta.url));
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url: String(url), options });
+    if (calls.length === 1) {
+      return new Response(null, {
+        status: 302,
+        headers: { location: 'https://github-production-user-asset-6210df.s3.amazonaws.com/file.png' }
+      });
+    }
+    return new Response(bytes, {
+      status: 200,
+      headers: { 'content-type': 'image/png', 'content-length': String(bytes.length) }
+    });
+  };
+  const result = await fetchQrPng(
+    'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    { fetchImpl }
+  );
+
+  assert.equal(result.bytes.length, bytes.length);
+  assert.deepEqual(result.size, { width: 2, height: 2 });
+  assert.equal(calls[0].options.redirect, 'manual');
+});
+
+test('rejects bad QR responses and disallowed redirects', async () => {
+  const url = 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000';
+  await assert.rejects(
+    fetchQrPng(url, {
+      fetchImpl: async () => new Response('x', { status: 200, headers: { 'content-type': 'text/plain' } })
+    }),
+    /PNG|Content-Type/i
+  );
+  await assert.rejects(
+    fetchQrPng(url, {
+      fetchImpl: async () => new Response(null, { status: 302, headers: { location: 'https://evil.example/file.png' } })
+    }),
+    /redirect|host/i
+  );
+});
+
+test('materializes fixture QR as a content-hashed same-origin asset', async () => {
+  const issue = {
+    number: 40,
+    title: '[about] Profile',
+    html_url: 'https://github.com/snxq/snxq.cc/issues/40'
+  };
+  const result = await materializeAboutAsset({
+    issue,
+    sourceUrl: 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    assetFixtures: new URL('../fixtures/assets', import.meta.url).pathname
+  });
+
+  assert.match(result.path, /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u);
+  assert.ok(result.bytes.length > 0);
+});
 test('builds deterministic schema-valid documents for all nine sections', async () => {
   const issues = await fixtureIssues();
   const first = buildDocuments({ issues, repository: 'snxq/snxq.cc', generatedAt });
@@ -73,6 +152,7 @@ test('attributes final pre-write envelope validation to the Issue supplying upda
     buildContent({
       source: 'fixture', fixtures: fixturesDirectory, output,
       repository: 'snxq/snxq.cc', generatedAt,
+      assetFixtures,
       beforeFinalValidation: documents => { documents.sections.posts.updatedAt = 'invalid'; }
     }),
     error => {
@@ -133,17 +213,21 @@ test('writes manifest and all section files atomically from fixture input', asyn
 
   const result = await buildContent({
     source: 'fixture', fixtures: fixturesDirectory, output,
-    repository: 'snxq/snxq.cc', generatedAt
+    repository: 'snxq/snxq.cc', generatedAt, assetFixtures
   });
 
   assert.equal(result.output, output);
   const entries = await readdir(output);
-  assert.equal(entries.length, 10);
+  assert.equal(entries.length, 11);
+  assert.equal(entries.includes('assets'), true);
   assert.equal(entries.includes('manifest.json'), true);
   assert.equal(entries.filter(name => /^(about|bookmarks|life|notes|now|opensource|posts|projects|uses)\.[a-f0-9]{64}\.json$/.test(name)).length, 9);
   const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json'), 'utf8'));
   const posts = JSON.parse(await readFile(path.join(output, manifest.files.posts), 'utf8'));
+  const about = JSON.parse(await readFile(path.join(output, manifest.files.about), 'utf8'));
   assert.equal(posts.data.items[0].id, 'issue-101');
+  assert.match(about.data.wechatQrCodeUrl, /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u);
+  assert.ok((await readFile(path.join(output, 'assets', path.basename(about.data.wechatQrCodeUrl)))).length > 0);
 });
 
 test('does not report a committed replacement as failed when backup cleanup fails', async () => {
@@ -158,7 +242,7 @@ test('does not report a committed replacement as failed when backup cleanup fail
   const warnings = [];
   const result = await buildContent({
     source: 'fixture', fixtures: fixturesDirectory, output,
-    repository: 'snxq/snxq.cc', generatedAt,
+    repository: 'snxq/snxq.cc', generatedAt, assetFixtures,
     cleanupBackup: async () => { throw new Error('cleanup denied'); },
     warn: message => warnings.push(message)
   });
@@ -180,7 +264,7 @@ test('keeps a committed replacement successful when post-install cleanup and war
 
   const result = await buildContent({
     source: 'fixture', fixtures: fixturesDirectory, output,
-    repository: 'snxq/snxq.cc', generatedAt,
+    repository: 'snxq/snxq.cc', generatedAt, assetFixtures,
     cleanupTemporary: async () => { throw new Error('temporary cleanup denied'); },
     warn: () => { throw new Error('warning sink denied'); }
   });
@@ -206,7 +290,7 @@ test('keeps committed output active when cleanup rejects with unknown values', a
     const warnings = [];
     const result = await buildContent({
       source: 'fixture', fixtures: fixturesDirectory, output,
-      repository: 'snxq/snxq.cc', generatedAt,
+      repository: 'snxq/snxq.cc', generatedAt, assetFixtures,
       [cleanupName]: async () => { throw thrownValue; },
       warn: message => warnings.push(message)
     });
@@ -219,6 +303,29 @@ test('keeps committed output active when cleanup rejects with unknown values', a
   }
 });
 
+test('requires fixture assets for a non-empty QR and preserves previous output', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
+  const output = path.join(root, 'content');
+  await mkdir(output);
+  await writeFile(path.join(output, 'sentinel.txt'), 'previous');
+
+  await assert.rejects(
+    buildContent({
+      source: 'fixture',
+      fixtures: new URL('../fixtures/issues/valid.json', import.meta.url).pathname,
+      output,
+      repository: 'snxq/snxq.cc',
+      generatedAt
+    }),
+    error => {
+      assert.equal(error instanceof ContentValidationError, true);
+      assert.equal(error.entries[0].field, 'WeChat QR Code URL');
+      assert.match(error.entries[0].title, /about/i);
+      return true;
+    }
+  );
+  assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
+});
 test('preserves previous output directory when validation fails before replacement', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
   const output = path.join(root, 'content');
