@@ -5,7 +5,7 @@
 
 ## Red/Green evidence
 - 初始聚焦测试在 `qr-asset.js` 不存在时失败；依赖安装后新增 QR 测试按预期暴露缺失实现。
-- 本轮安全加固：严格拒绝 URL credentials/ports/任意路径；Content-Length 非负整数且精确匹配；PNG IHDR CRC、bit-depth/color-type、compression/filter/interlace 全校验。
+- 后续 review 修复：GitHub source/redirect 继续禁止 query，允许严格 S3 host 的真实 `X-Amz-*` signed query；PNG 语义 mutation 测试重算 IHDR CRC，确保命中 dimension/bit-depth/color-type/compression/filter/interlace 分支。
 - `node --test tests/content/build-content.test.js tests/content/markdown.test.js`：28 passed。
 - `npm test`：122 passed，0 failed。
 - `npm run content:build:fixture`（重复执行）、`npm run site:build`、`npm run site:check`：全部通过。

@@ -22,6 +22,19 @@ async function fixtureIssues(name = 'valid.json') {
   return JSON.parse(await readFile(new URL(`../fixtures/issues/${name}`, import.meta.url), 'utf8'));
 }
 
+function pngCrc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function refreshIhdrCrc(bytes) {
+  new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setUint32(29, pngCrc32(bytes.slice(12, 29)));
+}
+
 test('validates QR source URL and rejects unsafe variants', () => {
   assert.equal(
     validateSourceUrl('https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000').hostname,
@@ -48,7 +61,7 @@ test('downloads one allowed redirect and validates PNG metadata', async () => {
     if (calls.length === 1) {
       return new Response(null, {
         status: 302,
-        headers: { location: 'https://github-production-user-asset-6210df.s3.amazonaws.com/file.png' }
+        headers: { location: 'https://github-production-user-asset-6210df.s3.amazonaws.com/file.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=abc123' }
       });
     }
     return new Response(bytes, {
@@ -140,6 +153,7 @@ test('rejects malformed PNG metadata variants', async () => {
   for (const [name, mutate] of variants) {
     const bytes = valid.slice();
     mutate(bytes);
+    if (name !== 'signature' && name !== 'IHDR' && name !== 'CRC') refreshIhdrCrc(bytes);
     assert.throws(() => validatePng(bytes, 'image/png'), new RegExp(`PNG|square|2048|${name}`, 'i'));
   }
 });
