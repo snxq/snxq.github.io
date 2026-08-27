@@ -1,314 +1,315 @@
-# About WeChat QR Card Implementation Plan
+# Same-Origin WeChat QR Asset Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让唯一的 `content:about` Issue 可配置“深夜旅行”微信公众号二维码，并在 About 页面资料与链接之后以不可点击的信息卡展示。
+**Goal:** 在内容构建阶段安全下载 About 二维码并发布为同源静态 PNG，避免访客浏览器请求 GitHub 或任意第三方域名。
 
-**Architecture:** 在现有 About 结构化字段中增加可选 HTTPS 图片 URL，内容规范化始终输出 `null | URL`，Schema 兼容旧文档缺失字段。客户端 renderer 直接消费透传数据并条件渲染二维码卡片；自动测试覆盖内容合同，浏览器 smoke test 覆盖 DOM 行为和响应式布局。
+**Architecture:** 保留 Issue 中的 GitHub 用户附件 URL 作为构建期输入；新增共享 `qr-asset.js` 负责 URL/redirect/PNG 校验、hash 命名和同源路径验证。`build-content.js` 在规范化后、原子写入前物化图片并替换 About 字段，fixture 使用本地 PNG；最终 Schema、`site:check` 和 renderer 只接受同源 hash 路径。
 
-**Tech Stack:** Node.js 22、现有 Issue Form/内容解析器、Zod、原生 DOM、CSS、Node `node:test`、Chrome DevTools/Playwright 浏览器 smoke test。
+**Tech Stack:** Node.js 22、Node 标准库 `fetch`/`crypto`/`fs`、Zod、现有 `node:test`、GitHub Actions、原生 DOM/CSS。
 
 ## Global Constraints
 
-- 字段名固定为 `WeChat QR Code URL`，规范化属性固定为 `wechatQrCodeUrl`。
-- 字段可选；新生成文档始终输出 `null | HTTPS URL`。
-- Schema 使用 `imageUrlSchema.nullable().optional()` 兼容旧 About 文档。
-- 公众号名称固定为“深夜旅行”，类型固定为“微信公众号”，提示固定为“扫码关注”。
-- 图片 `alt` 固定为“深夜旅行微信公众号二维码”。
-- 图片不可点击，不添加链接、弹窗、下载或放大交互。
-- 图片使用 `loading="lazy"` 与 `decoding="async"`。
-- 图片加载失败时隐藏整张二维码卡片。
-- 桌面端为横向信息卡；窄屏为居中纵向布局。
-- 不修改 `src/content-api.js`，不新增依赖或 DOM 测试框架。
-- 不建设通用图片或多图模型，不修改其他内容类型。
+- 输入 URL 严格为 `https://github.com/user-attachments/assets/<uuid>`，UUID 为十六进制标准 36 字符格式；不得有 query、fragment 或额外路径。
+- 下载使用 `redirect: 'manual'`，逐跳校验 HTTPS 和允许 host，最多 3 次；允许 GitHub 用户附件入口及 `github-production-user-asset-<字母或数字>.s3.amazonaws.com`。
+- 不向图片请求发送 `GITHUB_TOKEN` 或其他认证头。
+- 只接受 `image/png`，最大 1 MiB；同时检查 `Content-Length` 与实际流式字节数。
+- PNG 必须有正确 8 字节签名、合法 IHDR、正方形尺寸，边长 1–2048px。
+- 文件命名为 `assets/wechat-qr.<sha256>.png`，About 发布值为 `/generated/content/assets/wechat-qr.<sha256>.png`。
+- 构建中间态只接受远程 GitHub 用户附件 URL；最终发布态只接受 `null` 或严格同源 asset path；物化后重新 Schema 校验。
+- 所有资源错误关联 About Issue，转换为 `ContentValidationError`；失败时不替换旧 `generated/content`。
+- PR fixture 不访问网络，显式使用 `tests/fixtures/assets/wechat-qr.png`；缺少 fixture 必须失败。
+- 浏览器 renderer 只加载同源 hash 路径，继续保持不可点击、lazy、async、错误隐藏和响应式布局。
+- 不增加依赖，不修改 `src/content-api.js`，不建设通用图片或多图模型。
 
 ---
 
-### Task 1: Extend the About content contract
+### Task 1: Add shared QR asset validation and fixture support
 
 **Files:**
-- Modify: `.github/ISSUE_TEMPLATE/content-about.yml:31-41`
-- Modify: `scripts/content/constants.js:26-36`
-- Modify: `scripts/content/normalize.js:259-268`
-- Modify: `scripts/content/schema.js:86-89`
-- Modify: `tests/content/normalize.test.js:161-177`
-- Modify: `tests/content/schema.test.js`
-- Modify: `tests/content/templates.test.js`
-- Modify: `tests/fixtures/issues/valid.json:176-190`
+- Create: `scripts/content/qr-asset.js`
+- Create: `tests/fixtures/assets/wechat-qr.png`
+- Modify: `scripts/content/build-content.js`
+- Modify: `package.json:5-13`
+- Modify: `tests/content/build-content.test.js`
 
 **Interfaces:**
-- Produces: About normalized field `wechatQrCodeUrl: string | null`.
-- Produces: About Schema field `wechatQrCodeUrl?: string | null`.
-- Consumed by Task 2: `renderAbout(data)` reads `data.wechatQrCodeUrl ?? null`.
+- Produces: `validateSourceUrl(value): URL`
+- Produces: `fetchQrPng(url, { fetchImpl }): Promise<Uint8Array>`
+- Produces: `validatePng(bytes, contentType): { width, height }`
+- Produces: `assetPathFor(bytes): string`
+- Produces: `materializeAboutAsset({ issue, sourceUrl, assetFixtures, fetchImpl }): Promise<{ path, bytes }>`
+- Produces: `materializeContentAssets({ documents, records, assetFixtures, fetchImpl }): Promise<void>`
+- Consumes: `buildDocuments()` output and About record metadata.
 
-- [ ] **Step 1: Add failing normalization tests**
+- [ ] **Step 1: Create a real deterministic PNG fixture**
 
-Update the existing About test in `tests/content/normalize.test.js`:
+Add a small valid square PNG under `tests/fixtures/assets/wechat-qr.png`. Generate it with a checked-in base64 payload or a binary write script, but commit the resulting PNG only under `tests/fixtures/assets/`. The fixture must be a valid PNG, square, and no larger than 1 MiB; do not use a placeholder URL or fake production value.
+
+- [ ] **Step 2: Write failing resource-validation tests**
+
+Add tests to `tests/content/build-content.test.js` using injected `fetchImpl` responses and the fixture:
 
 ```js
-test('normalizes about newline fields, links, and optional WeChat QR code', () => {
-  const about = normalizeIssue(issue(10, '[about] Profile'), 'about', {
-    'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: 'UTC+8', Status: 'building',
-    Fields: 'Software\n\nDesign', Links: 'GitHub | https://github.com/snxq\nEmail | mailto:hi@example.com',
-    'WeChat QR Code URL': 'https://github.com/user-attachments/assets/qr-code'
-  });
-  assert.deepEqual(about.fields, ['Software', 'Design']);
-  assert.deepEqual(about.links, [
-    ['GitHub', 'https://github.com/snxq'],
-    ['Email', 'mailto:hi@example.com']
-  ]);
-  assert.equal(about.wechatQrCodeUrl, 'https://github.com/user-attachments/assets/qr-code');
-
-  const withoutQrCode = normalizeIssue(issue(11, '[about] Profile'), 'about', {
-    'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '',
-    Fields: '', Links: '', 'WeChat QR Code URL': ''
-  });
-  assert.equal(withoutQrCode.wechatQrCodeUrl, null);
-
-  for (const value of ['http://example.com/qr.png', 'not-a-url']) {
-    assert.throws(
-      () => normalizeIssue(issue(12, '[about] Profile'), 'about', {
-        'Display Name': 'snxq', Role: 'builder', Bio: 'Bio', Location: '', Status: '',
-        Fields: '', Links: '', 'WeChat QR Code URL': value
-      }),
-      /WeChat QR Code URL/
-    );
+test('validates QR source URL and rejects unsafe variants', async () => {
+  for (const value of [
+    'http://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://evil.example/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000',
+    'https://github.com/user-attachments/assets/not-a-uuid',
+    'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000?raw=1',
+    'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000/extra'
+  ]) {
+    assert.throws(() => validateSourceUrl(value), /WeChat QR Code URL|GitHub user attachment/i);
   }
 });
-```
 
-Keep the existing broken `Links` assertion as a separate test named `rejects malformed About links` so both behaviors remain covered.
-
-- [ ] **Step 2: Add failing Schema compatibility tests**
-
-Locate the About document Schema test in `tests/content/schema.test.js` and add:
-
-```js
-test('About schema accepts optional HTTPS WeChat QR code URLs only', () => {
-  const base = {
-    name: 'snxq', role: 'builder', bio: 'Bio', location: '', status: '', fields: [], links: []
+test('downloads one allowed redirect and validates PNG metadata', async () => {
+  const bytes = await readFile(new URL('../fixtures/assets/wechat-qr.png', import.meta.url));
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url: String(url), options });
+    if (calls.length === 1) return new Response(null, { status: 302, headers: { location: 'https://github-production-user-asset-6210df.s3.amazonaws.com/file.png' } });
+    return new Response(bytes, { status: 200, headers: { 'content-type': 'image/png', 'content-length': String(bytes.length) } });
   };
-  const envelope = data => ({
-    version: 1,
-    section: 'about',
-    title: '关于',
-    subtitle: 'IDENTITY SHEET',
-    updatedAt: '2026-08-27T00:00:00Z',
-    data
-  });
+  const result = await fetchQrPng('https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000', { fetchImpl });
 
-  assert.equal(sectionDocumentSchema.safeParse(envelope(base)).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: null })).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'https://example.com/qr.png' })).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'http://example.com/qr.png' })).success, false);
+  assert.equal(result.bytes.length, bytes.length);
+  assert.deepEqual(result.size, { width: 2, height: 2 });
+  assert.equal(calls[0].options.redirect, 'manual');
+});
+
+test('rejects bad QR responses and disallowed redirects', async () => {
+  const response = (body, headers = {}) => new Response(body, { status: 200, headers });
+  await assert.rejects(fetchQrPng('https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000', { fetchImpl: async () => response('x', { 'content-type': 'text/plain' }) }), /PNG|Content-Type/i);
+  await assert.rejects(fetchQrPng('https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000', { fetchImpl: async () => new Response(null, { status: 302, headers: { location: 'https://evil.example/file.png' } }) }), /redirect|host/i);
+});
+
+test('materializes fixture QR as a content-hashed same-origin asset', async () => {
+  const issue = { number: 40, title: '[about] Profile', html_url: 'https://github.com/snxq/snxq.cc/issues/40' };
+  const result = await materializeAboutAsset({ issue, sourceUrl: 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000', assetFixtures: new URL('../fixtures/assets', import.meta.url).pathname });
+
+  assert.match(result.path, /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/);
+  assert.ok(result.bytes.length > 0);
 });
 ```
 
-If the repository has no `tests/content/schema.test.js`, add this test to `tests/content/markdown.test.js`, which already imports `sectionDocumentSchema`; do not create a new single-test file.
+Import the named functions under test and `readFile`/`Response` from Node globals as required by the existing test style.
 
-- [ ] **Step 3: Add a failing template assertion**
-
-Append to `tests/content/templates.test.js`:
-
-```js
-test('About template offers an optional WeChat QR code URL', async () => {
-  const source = await readFile(new URL('content-about.yml', templates), 'utf8');
-  assert.match(source, /id: wechat-qr-code-url/u);
-  assert.match(source, /label: WeChat QR Code URL/u);
-  assert.match(source, /description: HTTPS image URL for the 深夜旅行 official account QR code\./u);
-});
-```
-
-- [ ] **Step 4: Update the valid fixture and verify tests fail**
-
-In the About body inside `tests/fixtures/issues/valid.json`, append:
-
-```text
-
-### WeChat QR Code URL
-
-https://github.com/user-attachments/assets/qr-code
-```
+- [ ] **Step 3: Run focused tests to verify failure**
 
 Run:
 
 ```bash
-npm test -- --test-name-pattern="WeChat QR|optional WeChat|normalizes about"
+npm test -- --test-name-pattern="QR source|allowed redirect|bad QR|materializes fixture"
 ```
 
-Expected: FAIL because the field is not accepted, normalized, or declared in Schema/template.
+Expected: FAIL because `scripts/content/qr-asset.js` and fixture integration do not exist.
 
-- [ ] **Step 5: Add the Issue Form field and parser allowlist**
+- [ ] **Step 4: Implement shared URL, redirect, byte, and PNG validation**
 
-Append to `.github/ISSUE_TEMPLATE/content-about.yml`:
-
-```yaml
-  - type: input
-    id: wechat-qr-code-url
-    attributes:
-      label: WeChat QR Code URL
-      description: HTTPS image URL for the 深夜旅行 official account QR code.
-```
-
-Update `FORM_FIELDS.about` in `scripts/content/constants.js`:
+Create `scripts/content/qr-asset.js` with these exact rules:
 
 ```js
-about: ['Display Name', 'Role', 'Bio', 'Location', 'Status', 'Fields', 'Links', 'WeChat QR Code URL'],
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+
+const MAX_BYTES = 1024 * 1024;
+const MAX_DIMENSION = 2048;
+const SOURCE_PATH = /^\/user-attachments\/assets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const ASSET_PATH = /^\/generated\/content\/assets\/wechat-qr\.([a-f0-9]{64})\.png$/u;
+const GITHUB_ASSET_HOST = /^github-production-user-asset-[a-z0-9]+\.s3\.amazonaws\.com$/iu;
+const PNG_SIGNATURE = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+const fail = message => { throw new Error(`WeChat QR Code URL: ${message}`); };
+
+export function validateSourceUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { fail('must be a valid GitHub user attachment URL'); }
+  if (url.protocol !== 'https:' || url.hostname !== 'github.com' || !SOURCE_PATH.test(url.pathname) || url.search || url.hash) {
+    fail('must be https://github.com/user-attachments/assets/<uuid> without query or fragment');
+  }
+  return url;
+}
+
+function allowedRedirect(url) {
+  return url.protocol === 'https:'
+    && (url.hostname === 'github.com' || GITHUB_ASSET_HOST.test(url.hostname));
+}
+
+async function readResponseBytes(response) {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > MAX_BYTES) fail('image exceeds 1 MiB');
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > MAX_BYTES) fail('image exceeds 1 MiB');
+    return bytes;
+  }
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BYTES) fail('image exceeds 1 MiB');
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+
+export function validatePng(bytes, contentType) {
+  if (contentType?.split(';', 1)[0].trim().toLowerCase() !== 'image/png') fail('Content-Type must be image/png');
+  if (bytes.length > MAX_BYTES || bytes.length < 33 || !PNG_SIGNATURE.every((value, index) => bytes[index] === value)) fail('must be a valid PNG under 1 MiB');
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(8) !== 13 || String.fromCharCode(...bytes.slice(12, 16)) !== 'IHDR') fail('PNG IHDR is invalid');
+  const width = view.getUint32(16);
+  const height = view.getUint32(20);
+  if (!width || !height || width > MAX_DIMENSION || height > MAX_DIMENSION || width !== height) fail('PNG must be square and 1–2048px');
+  return { width, height };
+}
+
+export function assetPathFor(bytes) {
+  return `/generated/content/assets/wechat-qr.${createHash('sha256').update(bytes).digest('hex')}.png`;
+}
+
+export function validateAssetPath(bytes, value) {
+  const match = ASSET_PATH.exec(value);
+  if (!match || match[1] !== createHash('sha256').update(bytes).digest('hex')) fail('asset path hash is invalid');
+  return value;
+}
+
+export async function fetchQrPng(value, { fetchImpl = fetch, maxRedirects = 3 } = {}) {
+  let url = validateSourceUrl(value);
+  for (let redirects = 0; ; redirects += 1) {
+    const response = await fetchImpl(url, { redirect: 'manual' });
+    if (response.status >= 300 && response.status < 400) {
+      if (redirects >= maxRedirects) fail('too many redirects');
+      const location = response.headers.get('location');
+      if (!location) fail('redirect has no Location');
+      url = new URL(location, url);
+      if (!allowedRedirect(url)) fail('redirect host is not allowed');
+      continue;
+    }
+    if (!response.ok) fail(`download failed with HTTP ${response.status}`);
+    const bytes = await readResponseBytes(response);
+    const size = validatePng(bytes, response.headers.get('content-type'));
+    return { bytes, size };
+  }
+}
+
+export async function materializeAboutAsset({ issue, sourceUrl, assetFixtures, fetchImpl }) {
+  let result;
+  try {
+    if (assetFixtures) {
+      result = { bytes: new Uint8Array(await readFile(`${assetFixtures}/wechat-qr.png`)) };
+      result.size = validatePng(result.bytes, 'image/png');
+    } else {
+      result = await fetchQrPng(sourceUrl, { fetchImpl });
+    }
+  } catch (error) {
+    if (error.message.startsWith('WeChat QR Code URL:')) throw error;
+    throw new Error(`WeChat QR Code URL: ${error.message}`, { cause: error });
+  }
+  return { path: assetPathFor(result.bytes), bytes: result.bytes, size: result.size, issue };
+}
 ```
 
-- [ ] **Step 6: Normalize the optional HTTPS image URL**
+The caller wraps the thrown Error with the About Issue context as `ContentValidationError`; this module remains reusable by `site:check`.
 
-Update the About branch in `scripts/content/normalize.js`:
+- [ ] **Step 5: Thread fixture option through the CLI**
+
+Modify `buildContent(options)` and `parseArguments(argv)` in `scripts/content/build-content.js`:
 
 ```js
-case 'about':
-  return {
-    name: required(issue, fields, 'Display Name'),
-    role: required(issue, fields, 'Role'),
-    bio: required(issue, fields, 'Bio'),
-    location: optional(fields, 'Location'),
-    status: optional(fields, 'Status'),
-    fields: lines(optional(fields, 'Fields')),
-    links: normalizeLinks(issue, optional(fields, 'Links')),
-    wechatQrCodeUrl: url(issue, 'WeChat QR Code URL', optional(fields, 'WeChat QR Code URL'), {
-      protocols: new Set(['https:'])
-    })
-  };
+// buildContent()
+const assetFixtures = options.assetFixtures;
+// after buildDocuments()
+await materializeContentAssets({ documents, records: documents.records, assetFixtures, fetchImpl: options.fetchImpl });
 ```
 
-Reuse the existing `url()` function; do not add a QR-specific validator.
+The implementation must retain the About source Issue metadata needed for error attribution. If `buildDocuments()` currently discards records, add a non-enumerable `records` property to its returned `documents` object so manifest bytes and existing equality tests remain unchanged.
 
-- [ ] **Step 7: Extend the strict About Schema compatibly**
-
-Update `aboutSchema` in `scripts/content/schema.js`:
+Add `--asset-fixtures` to the returned CLI options:
 
 ```js
-const aboutSchema = z.object({
-  name: z.string(), role: z.string(), bio: z.string(), location: z.string(), status: z.string(),
-  fields: z.array(z.string()), links: z.array(z.tuple([z.string(), linkUrlSchema])),
-  wechatQrCodeUrl: imageUrlSchema.nullable().optional()
-}).strict();
+assetFixtures: options['asset-fixtures']
 ```
 
-- [ ] **Step 8: Run focused and full automated tests**
+Update `package.json`:
+
+```json
+"content:build:fixture": "node scripts/content/build-content.js --source fixture --fixtures tests/fixtures/issues --asset-fixtures tests/fixtures/assets --output generated/content --repository fixture/content"
+```
+
+Production `content:build` leaves `assetFixtures` unset and downloads the validated Issue URL.
+
+- [ ] **Step 6: Write assets into the same atomic temporary directory**
+
+Update `writeDocumentsAtomically()` to accept `assets`, create `temporary/assets`, and write every hashed PNG before the temporary directory is renamed. The generated About document must already contain the same-origin path before final manifest/section serialization and Schema validation.
+
+- [ ] **Step 7: Run focused and full content tests**
 
 Run:
 
 ```bash
-npm test -- --test-name-pattern="WeChat QR|optional WeChat|normalizes about|malformed About links"
+npm test -- --test-name-pattern="QR|About|atomic|fixture"
 npm test
 npm run content:build:fixture
 ```
 
-Expected: focused tests PASS; full suite has 0 failures; fixture content build succeeds and generated About data contains the HTTPS URL.
+Expected: all tests pass, fixture build writes `generated/content/assets/wechat-qr.<sha256>.png`, and generated About JSON stores only the same-origin path.
 
-- [ ] **Step 9: Commit Task 1**
+- [ ] **Step 8: Commit Task 1**
 
 ```bash
-git add .github/ISSUE_TEMPLATE/content-about.yml scripts/content/constants.js scripts/content/normalize.js scripts/content/schema.js tests/content/normalize.test.js tests/content/markdown.test.js tests/content/templates.test.js tests/fixtures/issues/valid.json
-git commit -m "feat: add About WeChat QR content field"
+git add scripts/content/qr-asset.js scripts/content/build-content.js package.json tests/fixtures/assets/wechat-qr.png tests/content/build-content.test.js
+ git commit -m "feat: materialize About QR as same-origin asset"
 ```
 
-If the Schema test was placed in another existing test file, stage that file instead of `tests/content/markdown.test.js`.
-
-### Task 2: Render the non-interactive QR information card
+### Task 2: Enforce published asset Schema and static checks
 
 **Files:**
-- Modify: `src/app.js:186-193`
-- Modify: `styles.css:163-172,279-310`
+- Modify: `scripts/content/schema.js:1-124`
+- Modify: `scripts/check-static-site.js:1-117`
+- Modify: `tests/content/schema.test.js` or existing schema test location
+- Modify: `tests/content/build-site.test.js`
 
 **Interfaces:**
-- Consumes: `data.wechatQrCodeUrl?: string | null` from Task 1.
-- Produces: conditional `.wechat-card` containing an `<img>` and fixed descriptive copy.
-- Browser behavior: image `error` hides the `.wechat-card`; no `<a>` or click handler exists.
+- Consumes: `validateAssetPath`, PNG validation and generated `assets` directory from Task 1.
+- Produces: final published About schema rejects remote URLs; static checker verifies asset existence, hash, PNG constraints.
 
-- [ ] **Step 1: Add the minimal renderer code**
+- [ ] **Step 1: Add failing final-contract tests**
 
-Add before `renderAbout` in `src/app.js`:
-
-```js
-function wechatQrCard(url) {
-  const resolved = safeHref(url, ['https:']);
-  if (!resolved) return null;
-
-  const card = el('div', { className: 'wechat-card' });
-  const image = el('img', {
-    className: 'wechat-qr',
-    attrs: {
-      src: resolved,
-      alt: '深夜旅行微信公众号二维码',
-      loading: 'lazy',
-      decoding: 'async'
-    },
-    on: { error: () => { card.hidden = true; } }
-  });
-  card.append(image, el('div', { className: 'wechat-copy' }, [
-    text('strong', '深夜旅行'),
-    text('span', '微信公众号'),
-    text('small', '扫码关注')
-  ]));
-  return card;
-}
-```
-
-Update `renderAbout` so the links and optional card remain in the right column:
+Add tests asserting:
 
 ```js
-function renderAbout(data) {
-  if (!data || !Array.isArray(data.fields) || !Array.isArray(data.links)) return unavailableState();
-  const facts = [['LOCATION', data.location], ['NOW', data.status], ['FIELDS', data.fields.join(' · ')]];
-  const qrCard = wechatQrCard(data.wechatQrCodeUrl ?? null);
-  return el('div', { className: 'identity' }, [
-    text('div', 'sx', 'identity-monogram'),
-    el('div', { className: 'identity-copy' }, [
-      text('p', data.role, 'role'),
-      text('h3', data.name),
-      text('p', data.bio, 'bio'),
-      el('div', { className: 'fact-list' }, facts.map(([key, value]) =>
-        el('div', { className: 'fact' }, [text('strong', key), text('span', value)])
-      )),
-      el('div', { className: 'link-row' }, data.links.map(([label, href]) => safeLink(`${label} ↗`, href))),
-      qrCard
-    ])
-  ]);
-}
+assert.equal(publishedAboutSchema.safeParse({ ...base, wechatQrCodeUrl: null }).success, true);
+assert.equal(publishedAboutSchema.safeParse({ ...base, wechatQrCodeUrl: '/generated/content/assets/wechat-qr.' + 'a'.repeat(64) + '.png' }).success, true);
+assert.equal(publishedAboutSchema.safeParse({ ...base, wechatQrCodeUrl: 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000' }).success, false);
 ```
 
-The existing `el()` helper skips `null` children, so no extra conditional branch is needed.
+Add static-site cases for missing asset and hash mismatch; `checkStaticSite` must reject them.
 
-- [ ] **Step 2: Add desktop card styles**
+- [ ] **Step 2: Implement separate build and published About schemas**
 
-Append after `.text-link` in `styles.css`:
+Export `aboutBuildSchema` with optional nullable strict GitHub source URL and `aboutPublishedSchema` with optional nullable strict same-origin path. Use the published schema in final `sectionDocumentSchema`; use the build schema for the pre-materialization About document validation in `build-content.js`, then published schema after replacement.
 
-```css
-.wechat-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: fit-content;
-  margin-top: 24px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  background: rgba(233,224,206,.018);
-}
-.wechat-card[hidden] { display: none; }
-.wechat-qr { display: block; width: 112px; height: 112px; object-fit: contain; background: #fff; }
-.wechat-copy { display: grid; gap: 7px; min-width: 110px; }
-.wechat-copy strong { font-size: 15px; font-weight: 500; }
-.wechat-copy span { color: var(--paper-dim); font-size: 12px; }
-.wechat-copy small { color: var(--rust); font: 400 8px/1.4 var(--mono); letter-spacing: .14em; }
-```
+Do not use a permissive union that allows remote URLs in final output.
 
-- [ ] **Step 3: Add the narrow-screen layout**
+- [ ] **Step 3: Validate assets in `site:check`**
 
-Inside the existing `@media (max-width: 640px)` block, add:
+After section validation, read the published About document and, when the path is non-null:
 
-```css
-.wechat-card { width: 100%; flex-direction: column; text-align: center; }
-.wechat-copy { justify-items: center; }
-```
+1. Match strict asset path and extract hash.
+2. Resolve only under `dist/generated/content/assets`.
+3. Read bytes and verify SHA-256 equals extracted hash.
+4. Reuse `validatePng(bytes, 'image/png')` and require valid size/signature/dimensions.
+5. Reject any remote URL or missing asset.
 
-- [ ] **Step 4: Run automated regression checks**
+- [ ] **Step 4: Add tests and run full checks**
 
 Run:
 
@@ -320,115 +321,103 @@ npm run site:check
 git diff --check
 ```
 
-Expected: every command exits 0.
+Expected: all commands exit 0 and deployed About JSON contains same-origin path plus matching asset.
 
 - [ ] **Step 5: Commit Task 2**
 
 ```bash
-git add src/app.js styles.css
-git commit -m "feat: render About WeChat QR card"
+git add scripts/content/schema.js scripts/check-static-site.js tests/content/schema.test.js tests/content/build-site.test.js
+git commit -m "test: enforce same-origin QR assets"
 ```
 
-### Task 3: Browser smoke test the QR card
+### Task 3: Restrict About renderer to same-origin assets
 
 **Files:**
-- Verify only: generated fixture site and Task 2 files
+- Modify: `src/app.js:186-212`
+- Modify: `styles.css:163-172,279-310`
 
 **Interfaces:**
-- Consumes: fixture About document containing `wechatQrCodeUrl`.
-- Produces: browser evidence for desktop/mobile layout and error behavior; no code unless a verified defect is found.
+- Consumes: `wechatQrCodeUrl?: string | null` final published path.
+- Produces: same existing `.wechat-card`, but no remote URL request.
 
-- [ ] **Step 1: Build and launch the fixture site**
+- [ ] **Step 1: Add strict path guard**
+
+Replace the current renderer guard:
+
+```js
+const WECHAT_QR_PATH = /^\/generated\/content\/assets\/wechat-qr\.[a-f0-9]{64}\.png$/u;
+
+function wechatQrCard(url) {
+  if (typeof url !== 'string' || !WECHAT_QR_PATH.test(url)) return null;
+  const card = el('div', { className: 'wechat-card' });
+  // retain the existing image attributes, fixed copy, error handler, and no anchor
+}
+```
+
+- [ ] **Step 2: Run automated and browser checks**
 
 Run:
 
 ```bash
+npm test
 npm run content:build:fixture
 npm run site:build
-npm run serve
+npm run site:check
 ```
 
-Keep the server running at `http://localhost:4173`.
+Then use the existing local fixture server at `http://localhost:4173` and verify:
 
-- [ ] **Step 2: Verify the desktop About card in a browser**
+- About QR `src` starts with `http://localhost:4173/generated/content/assets/`.
+- `card.querySelectorAll('a').length === 0`.
+- fixed alt/copy/loading/decoding remain correct.
+- dispatching `error` sets `card.hidden === true`.
+- desktop row and 390px mobile column remain intact.
+- no document horizontal overflow.
 
-At a desktop viewport around `1280 × 900`:
+- [ ] **Step 3: Commit Task 3**
 
-1. Open `http://localhost:4173`.
-2. Enter the `about` command.
-3. Confirm `.wechat-card` exists after `.link-row`.
-4. Confirm `.wechat-card a` count is `0`.
-5. Confirm the image has:
-   - `alt="深夜旅行微信公众号二维码"`
-   - `loading="lazy"`
-   - `decoding="async"`
-6. Confirm fixed text “深夜旅行 / 微信公众号 / 扫码关注”。
-7. Capture and inspect a screenshot; the QR card must remain secondary to the name and Bio.
-
-- [ ] **Step 3: Verify image failure behavior**
-
-In the browser console or automation evaluate:
-
-```js
-const image = document.querySelector('.wechat-qr');
-image.dispatchEvent(new Event('error'));
-document.querySelector('.wechat-card').hidden;
+```bash
+git add src/app.js styles.css
+git commit -m "fix: keep About QR image same-origin"
 ```
 
-Expected: result is `true`, and the card disappears without affecting the About content.
-
-- [ ] **Step 4: Verify the narrow-screen layout**
-
-Resize to approximately `390 × 844` and reopen About if necessary.
-
-Expected:
-
-- Existing `.identity` becomes one column.
-- `.wechat-card` remains inside the right/content column flow.
-- Card content is vertically stacked and centered.
-- QR image stays `112 × 112px` without clipping or horizontal page scrolling.
-
-Capture and inspect a mobile screenshot.
-
-- [ ] **Step 5: Verify absence compatibility**
-
-Temporarily use browser script to remove/reload data without `wechatQrCodeUrl`, or build a fixture variant with the field omitted.
-
-Expected: About remains available and `.wechat-card` is absent. Do not commit temporary fixture changes.
-
-### Task 4: Final verification and documentation commit
+### Task 4: Final verification and documentation
 
 **Files:**
-- Verify: all Task 1–2 files
-- Verify: `docs/superpowers/specs/2026-08-27-about-wechat-qr-code-design.md`
+- Verify: all implementation files above
+- Modify if needed: `docs/superpowers/specs/2026-08-27-about-wechat-qr-code-design.md`
 - Verify: `docs/superpowers/plans/2026-08-27-about-wechat-qr-code.md`
 
-**Interfaces:**
-- Produces merge-readiness evidence; no new runtime interface.
-
-- [ ] **Step 1: Run the complete automated pipeline**
+- [ ] **Step 1: Run complete verification**
 
 ```bash
-npm test && npm run content:build:fixture && npm run site:build && npm run site:check
+npm test && npm run content:build:fixture && npm run site:build && npm run site:check && git diff --check
 ```
 
-Expected: 0 test failures and every build/check command exits 0.
+Expected: all tests pass and no whitespace errors.
 
-- [ ] **Step 2: Validate repository state**
+- [ ] **Step 2: Inspect generated contract**
 
 ```bash
-git diff --check
+python -c 'import json, pathlib, re; m=json.load(open("generated/content/manifest.json")); d=json.load(open(pathlib.Path("generated/content")/m["files"]["about"])); print(d["data"]["wechatQrCodeUrl"]); print(sorted(pathlib.Path("generated/content/assets").iterdir()))'
+```
+
+Expected: printed path matches `/generated/content/assets/wechat-qr.<64 lowercase hex>.png`, and exactly that asset exists.
+
+- [ ] **Step 3: Review repository state**
+
+```bash
 git status --short
 git diff --stat
 ```
 
-Expected: no whitespace errors, no generated `dist` files, and no unrelated changes.
+Expected: generated/ and dist/ remain ignored; only intended implementation, tests, docs, and plan changes exist.
 
-- [ ] **Step 3: Commit the plan if still uncommitted**
+- [ ] **Step 4: Commit updated design and plan**
 
 ```bash
-git add docs/superpowers/plans/2026-08-27-about-wechat-qr-code.md
-git commit -m "docs: plan About WeChat QR card"
+git add docs/superpowers/specs/2026-08-27-about-wechat-qr-code-design.md docs/superpowers/plans/2026-08-27-about-wechat-qr-code.md
+git commit -m "docs: plan same-origin QR asset pipeline"
 ```
 
-Do not create an empty commit if the plan was already committed.
+Do not create an empty commit when already committed.
