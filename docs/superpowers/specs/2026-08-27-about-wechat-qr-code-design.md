@@ -20,49 +20,73 @@
 
 ## 内容模型
 
-在 `.github/ISSUE_TEMPLATE/content-about.yml` 增加可选输入字段：
-
-```yaml
-- type: input
-  id: wechat-qr-code-url
-  attributes:
-    label: WeChat QR Code URL
-    description: HTTPS image URL for the 深夜旅行 official account QR code.
-```
-
-在 About 的结构化正文中对应：
+Issue 输入仍使用远程源地址：
 
 ```markdown
 ### WeChat QR Code URL
 
-https://github.com/user-attachments/assets/4918d2e9-b5ae-44ce-b91c-4c0661e3e481
+https://github.com/user-attachments/assets/<uuid>
 ```
 
-将 `WeChat QR Code URL` 加入 About 的允许字段，并规范化为：
+该 URL 只存在于构建期输入，不会发布到浏览器可读的 About JSON。内容构建成功后，规范化属性改为：
 
 ```js
-{
-  // existing fields
-  wechatQrCodeUrl: 'https://...'
-}
+wechatQrCodeUrl: '/generated/content/assets/wechat-qr.<sha256>.png' | null
 ```
 
 约束：
 
-- 字段可选；空值规范化为 `null`。
-- 非空时必须是有效的 HTTPS URL。
-- 继续使用现有 URL 校验函数与图片 URL 协议约束，不增加依赖。
-- About 仍然只能存在一个已发布实例。
+- 字段可选；无值规范化为 `null`。
+- 非空输入必须是 `https://github.com/user-attachments/assets/<uuid>`。
+- 构建阶段下载并校验图片，再替换为严格同源 asset path。
+- 浏览器只接受 `^/generated/content/assets/wechat-qr\.[a-f0-9]{64}\.png$`。
 
-## Schema 与客户端契约
+## 构建期图片物化
 
-About Schema 增加：
+内容构建在写入不可变 JSON 前物化二维码：
 
-```js
-wechatQrCodeUrl: imageUrlSchema.nullable().optional()
+1. 生产构建使用 `fetch(url, { redirect: 'manual' })` 下载；禁止默认自动跟随。每次响应显式读取 `Location`，校验下一跳为 HTTPS 且 host 属于允许的 GitHub 用户附件入口或 `github-production-user-asset-<字母或数字>.s3.amazonaws.com`，仅在剩余重定向次数大于 0 时继续，最多 3 次。
+2. 输入 URL 必须严格满足：协议 `https:`、host `github.com`、pathname 为 `/user-attachments/assets/<uuid>`，其中 `<uuid>` 为标准小写或大写十六进制 UUID（`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`）；不得包含 query 或 fragment，拒绝额外路径段。
+3. 只接受 `Content-Type: image/png`，最大 1 MiB，并同时检查 `Content-Length` 与实际流式字节数。
+4. 校验 PNG 8 字节签名与 IHDR；要求正方形、边长 1–2048px。
+5. 使用图片字节 SHA-256 命名 `assets/wechat-qr.<sha256>.png`。
+6. 将 About 字段替换为同源路径，并重新计算 About JSON 与 manifest 的不可变 hash。
+7. 下载、redirect、解析、MIME、大小、PNG 签名、尺寸、文件写入或最终 Schema 失败，均包装为关联 About Issue 的 `ContentValidationError`，包含 `issueNumber`、`title`、`field: WeChat QR Code URL` 和 `url`，以确保现有 report/comment 流程可用。
+
+图片与 JSON 写入同一临时 `generated/content` 目录；所有校验成功后原子替换旧目录。生产图片请求不发送 `GITHUB_TOKEN` 或其他认证头。PR fixture 构建读取 `tests/fixtures/assets/wechat-qr.png`，不访问网络。
+
+图片源输入与浏览器发布值使用两个独立合同，禁止用一个同时接受远程和同源值的 union：
+
+- `aboutBuildSchema`：内容规范化中间态，只接受字段缺失、`null` 或严格 GitHub 用户附件 URL。
+- `aboutSchema`：最终发布态，只接受字段缺失、`null` 或严格同源哈希路径。
+
+`buildDocuments()` 的初次校验使用构建中间态合同；图片物化并替换 URL 后，必须使用发布态 `sectionDocumentSchema` 重新校验，之后才能写入临时目录。`site:check` 只使用发布态合同，因此远程 URL 永远不能成为合法部署产物。
+
+`src/content-api.js` 继续原样透传 `section.data`。页面 renderer 使用 `data.wechatQrCodeUrl ?? null`，并只接受匹配 `^/generated/content/assets/wechat-qr\.[a-f0-9]{64}\.png$` 的路径；其他值不渲染。
+
+PR fixture 构建通过显式参数读取本地图片，不访问网络：
+
+```sh
+node scripts/content/build-content.js \
+  --source fixture \
+  --fixtures tests/fixtures/issues \
+  --asset-fixtures tests/fixtures/assets \
+  --output generated/content \
+  --repository fixture/content
 ```
 
-新生成文档始终输出 `wechatQrCodeUrl: null | HTTPS URL`；Schema 的 `optional()` 仅用于兼容旧缓存或旧生成文档。`src/content-api.js` 继续原样透传 `section.data`，不增加额外规范化。页面 renderer 使用 `data.wechatQrCodeUrl ?? null`，只在值非空时创建二维码卡片。
+`parseArguments()`、`buildContent()` 与 `content:build:fixture` npm script 均显式传递 `assetFixtures`。fixture 模式遇到非空二维码字段时，缺少 `--asset-fixtures`、目录或 `wechat-qr.png` 必须失败，不依赖当前工作目录，也不回退网络。
+
+## 共享二维码资源模块
+
+新增 `scripts/content/qr-asset.js`，集中提供并由内容构建与 `site:check` 复用：
+
+- GitHub 用户附件输入 URL 和允许的 redirect host 校验。
+- PNG MIME、1 MiB 限制、签名、IHDR、正方形及尺寸校验。
+- SHA-256 文件名、同源路径生成与验证。
+- 已写入 asset 文件的字节/hash/PNG 复验。
+
+下载编排与 fixture 文件选择仍由内容构建负责；所有二进制及路径规则只有这一套实现。
 
 ## 页面展示
 
@@ -92,20 +116,25 @@ wechatQrCodeUrl: imageUrlSchema.nullable().optional()
 
 ```text
 content:about Issue
-  → content parser 读取 WeChat QR Code URL
-  → normalizeIssue 校验 HTTPS 并输出 wechatQrCodeUrl
-  → Zod about schema 校验
-  → generated/content/about.<hash>.json
+  → parser 读取 GitHub 用户附件 URL
+  → normalizeIssue 校验输入 URL 形状
+  → 生产下载 / PR 读取本地 PNG fixture
+  → 校验 PNG 类型、大小、签名和尺寸
+  → 哈希命名并写入 generated/content/assets
+  → About JSON 替换为同源路径并完成最终 Schema 校验
   → content-api 加载
   → renderAbout 条件渲染二维码信息卡
 ```
 
 ## 错误处理
 
-- URL 缺失：正常发布，不显示二维码卡片。
-- URL 非法或非 HTTPS：内容构建失败，沿用现有 validation report 与 Issue 评论机制。
+- URL 缺失：正常发布 `null`，不生成 asset，不显示二维码卡片。
+- 输入 URL 不是规定的 GitHub 用户附件：内容构建失败。
+- redirect、网络、MIME、大小、PNG 签名或尺寸不符合合同：内容构建失败并保留上一版输出。
+- fixture 构建缺少本地二维码：fixture 内容构建失败，不回退到网络。
+- 部署产物 About JSON 含远程 URL、asset 缺失或 hash 不符：`site:check` 失败。
 - 客户端图片加载失败：隐藏二维码卡片，不影响其余 About 内容。
-- 文档缺少新字段：客户端视为 `null`，避免旧缓存/旧 fixture 导致 About 不可用。
+- 旧文档缺少新字段：客户端视为 `null`。
 
 ## 测试
 
@@ -114,20 +143,26 @@ content:about Issue
 自动测试：
 
 - About 模板声明可选 `WeChat QR Code URL`。
-- 有效 HTTPS 图片 URL 正确规范化。
+- 输入只接受规定的 GitHub 用户附件 URL，拒绝其他 HTTPS host、HTTP 和无效 URL。
 - 空字段输出 `null`。
-- HTTP、无效 URL 被内容校验拒绝。
-- About Zod Schema 接受缺失、`null` 或 HTTPS URL，拒绝不安全 URL。
+- 生产下载允许规定的 GitHub → S3 HTTPS redirect，拒绝其他 host、HTTP、redirect 超限。
+- 拒绝错误 MIME、超过 1 MiB、错误 PNG 签名、非正方形和超限尺寸。
+- fixture 构建不访问网络，写出哈希命名 PNG。
+- 下载失败不替换旧输出目录。
+- 最终 About JSON 只含同源 asset path，并在替换后重新计算 JSON/manifest hash。
+- `site:check` 拒绝远程 URL、缺失 asset、hash 不符或非法 PNG。
+- 旧文档字段缺失仍可读取。
 
 浏览器 smoke test：
 
-- 有 URL 时生成二维码卡片，图片不位于 `<a>` 内。
+- `<img src>` 是严格同源路径且图片成功加载。
+- 二维码卡片不包含 `<a>`。
 - `alt`、`loading`、`decoding` 与固定文案正确。
 - 触发图片 `error` 后整张卡片隐藏。
 - 无 URL 时不生成卡片。
 - 桌面宽度下为横向卡片，窄屏下为居中纵向布局。
 
-不为这个小功能引入 DOM 测试框架或额外测试依赖。
+不引入 DOM、图片或 HTTP 测试框架；下载测试使用注入的 `fetch` test double。
 
 最终验证：
 
