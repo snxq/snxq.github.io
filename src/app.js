@@ -183,12 +183,41 @@ function renderHelp(data) {
   return [text('p', data.intro, 'section-intro'), el('div', { className: 'command-ledger' }, data.commands.map(([command, description]) => el('div', { className: 'command-row' }, [text('code', command), text('span', description), el('button', { text: '执行 ↗', attrs: { type: 'button' }, on: { click: () => { closeWindow(); submitInput(command); } } })])) )];
 }
 
+function wechatQrCard(url) {
+  const resolved = safeHref(url, ['https:']);
+  if (!resolved) return null;
+
+  const card = el('div', { className: 'wechat-card' });
+  const image = el('img', {
+    className: 'wechat-qr',
+    attrs: {
+      src: resolved,
+      alt: '深夜旅行微信公众号二维码',
+      loading: 'lazy',
+      decoding: 'async'
+    },
+    on: { error: () => { card.hidden = true; } }
+  });
+  card.append(image, el('div', { className: 'wechat-copy' }, [
+    text('strong', '深夜旅行'),
+    text('span', '微信公众号'),
+    text('small', '扫码关注')
+  ]));
+  return card;
+}
+
 function renderAbout(data) {
   if (!data || !Array.isArray(data.fields) || !Array.isArray(data.links)) return unavailableState();
   const facts = [['LOCATION', data.location], ['NOW', data.status], ['FIELDS', data.fields.join(' · ')]];
+  const qrCard = wechatQrCard(data.wechatQrCodeUrl ?? null);
   return el('div', { className: 'identity' }, [
     text('div', 'sx', 'identity-monogram'),
-    el('div', { className: 'identity-copy' }, [text('p', data.role, 'role'), text('h3', data.name), text('p', data.bio, 'bio'), el('div', { className: 'fact-list' }, facts.map(([key, value]) => el('div', { className: 'fact' }, [text('strong', key), text('span', value)]))), el('div', { className: 'link-row' }, data.links.map(([label, href]) => safeLink(`${label} ↗`, href)) )])
+    el('div', { className: 'identity-copy' }, [
+      text('p', data.role, 'role'), text('h3', data.name), text('p', data.bio, 'bio'),
+      el('div', { className: 'fact-list' }, facts.map(([key, value]) => el('div', { className: 'fact' }, [text('strong', key), text('span', value)]))),
+      el('div', { className: 'link-row' }, data.links.map(([label, href]) => safeLink(`${label} ↗`, href))),
+      qrCard
+    ])
   ]);
 }
 
