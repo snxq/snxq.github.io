@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { markdownToBlocks } from '../../scripts/content/markdown.js';
-import { manifestSchema, richBlockSchema, sectionDocumentSchema } from '../../scripts/content/schema.js';
+import { buildSectionDocumentSchema, manifestSchema, richBlockSchema, sectionDocumentSchema } from '../../scripts/content/schema.js';
 
 const context = {
   issueNumber: 42,
@@ -133,7 +133,7 @@ test('rejects a quoted nested list inside a list item', () => {
   assert.throws(() => markdownToBlocks('- parent\n\n  > - child', context), /nested lists are not allowed/);
 });
 
-test('About schema accepts optional HTTPS WeChat QR code URLs only', () => {
+test('About schemas separate build attachment URLs from published asset paths', () => {
   const base = {
     name: 'snxq', role: 'builder', bio: 'Bio', location: '', status: '', fields: [], links: []
   };
@@ -145,11 +145,17 @@ test('About schema accepts optional HTTPS WeChat QR code URLs only', () => {
     updatedAt: '2026-08-27T00:00:00Z',
     data
   });
+  const remote = 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000';
+  const local = `/generated/content/assets/wechat-qr.${'a'.repeat(64)}.png`;
 
-  assert.equal(sectionDocumentSchema.safeParse(envelope(base)).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: null })).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'https://example.com/qr.png' })).success, true);
-  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: 'http://example.com/qr.png' })).success, false);
+  for (const schema of [buildSectionDocumentSchema, sectionDocumentSchema]) {
+    assert.equal(schema.safeParse(envelope(base)).success, true);
+    assert.equal(schema.safeParse(envelope({ ...base, wechatQrCodeUrl: null })).success, true);
+  }
+  assert.equal(buildSectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: remote })).success, true);
+  assert.equal(buildSectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: local })).success, false);
+  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: local })).success, true);
+  assert.equal(sectionDocumentSchema.safeParse(envelope({ ...base, wechatQrCodeUrl: remote })).success, false);
 });
 
 test('validates strict versioned section envelopes and manifests with Zod', () => {

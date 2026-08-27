@@ -7,10 +7,11 @@ import path from 'node:path';
 
 import { buildContent, buildDocuments } from '../../scripts/content/build-content.js';
 import { ContentValidationError } from '../../scripts/content/errors.js';
-import { manifestSchema, sectionDocumentSchema } from '../../scripts/content/schema.js';
+import { buildSectionDocumentSchema, manifestSchema, sectionDocumentSchema } from '../../scripts/content/schema.js';
 import {
   fetchQrPng,
   materializeAboutAsset,
+  validatePng,
   validateSourceUrl
 } from '../../scripts/content/qr-asset.js';
 
@@ -61,6 +62,7 @@ test('downloads one allowed redirect and validates PNG metadata', async () => {
   assert.equal(result.bytes.length, bytes.length);
   assert.deepEqual(result.size, { width: 2, height: 2 });
   assert.equal(calls[0].options.redirect, 'manual');
+  assert.deepEqual(calls[0].options.headers, {});
 });
 
 test('rejects bad QR responses and disallowed redirects', async () => {
@@ -79,6 +81,40 @@ test('rejects bad QR responses and disallowed redirects', async () => {
   );
 });
 
+test('rejects redirect and response size limit violations', async () => {
+  const url = 'https://github.com/user-attachments/assets/123e4567-e89b-12d3-a456-426614174000';
+  const redirect = () => new Response(null, { status: 302, headers: { location: url } });
+  await assert.rejects(fetchQrPng(url, { fetchImpl: async () => redirect() }), /too many redirects/i);
+  await assert.rejects(fetchQrPng(url, {
+    fetchImpl: async () => new Response(null, { status: 302, headers: { location: 'http://github.com/file.png' } })
+  }), /redirect host/i);
+  await assert.rejects(fetchQrPng(url, {
+    fetchImpl: async () => new Response(null, { status: 200, headers: {
+      'content-type': 'image/png', 'content-length': String(1024 * 1024 + 1)
+    } })
+  }), /1 MiB/i);
+  await assert.rejects(fetchQrPng(url, {
+    fetchImpl: async () => new Response(new Uint8Array(1024 * 1024 + 1), {
+      status: 200, headers: { 'content-type': 'image/png' }
+    })
+  }), /1 MiB/i);
+});
+
+test('rejects malformed PNG metadata variants', async () => {
+  const valid = new Uint8Array(await readFile(new URL('../fixtures/assets/wechat-qr.png', import.meta.url)));
+  const variants = [
+    ['signature', bytes => { bytes[0] = 0; }],
+    ['IHDR', bytes => { bytes[12] = 0; }],
+    ['square', bytes => { new DataView(bytes.buffer).setUint32(20, 3); }],
+    ['zero', bytes => { new DataView(bytes.buffer).setUint32(16, 0); }],
+    ['maximum', bytes => { new DataView(bytes.buffer).setUint32(16, 2049); new DataView(bytes.buffer).setUint32(20, 2049); }]
+  ];
+  for (const [name, mutate] of variants) {
+    const bytes = valid.slice();
+    mutate(bytes);
+    assert.throws(() => validatePng(bytes, 'image/png'), new RegExp(`PNG|square|2048|${name}`, 'i'));
+  }
+});
 test('materializes fixture QR as a content-hashed same-origin asset', async () => {
   const issue = {
     number: 40,
@@ -116,7 +152,7 @@ test('builds deterministic schema-valid documents for all nine sections', async 
   assert.equal(Object.keys(first.sections).length, 9);
   assert.equal(manifestSchema.safeParse(first.manifest).success, true);
   for (const document of Object.values(first.sections)) {
-    assert.equal(sectionDocumentSchema.safeParse(document).success, true);
+    assert.equal(buildSectionDocumentSchema.safeParse(document).success, true);
   }
 });
 
@@ -325,6 +361,50 @@ test('requires fixture assets for a non-empty QR and preserves previous output',
     }
   );
   assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
+});
+test('attributes QR download validation to the About Issue and preserves output', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
+  const output = path.join(root, 'content');
+  await mkdir(output);
+  await writeFile(path.join(output, 'sentinel.txt'), 'previous');
+
+  await assert.rejects(buildContent({
+    source: 'fixture',
+    fixtures: new URL('../fixtures/issues/valid.json', import.meta.url).pathname,
+    assetFixtures,
+    output,
+    repository: 'snxq/snxq.cc',
+    generatedAt,
+    writeAssetImpl: async () => { throw new Error('asset write denied'); }
+  }), error => {
+    assert.equal(error instanceof ContentValidationError, true);
+    assert.equal(error.entries[0].field, 'WeChat QR Code URL');
+    assert.match(error.entries[0].reason, /asset write denied/);
+    assert.match(error.entries[0].title, /about/i);
+    return true;
+  });
+  assert.equal(await readFile(path.join(output, 'sentinel.txt'), 'utf8'), 'previous');
+});
+
+test('attributes downloaded QR validation failures to the About Issue', async () => {
+  const issues = await fixtureIssues();
+  await assert.rejects(buildContent({
+    source: 'gh',
+    token: 'test-token',
+    repository: 'snxq/snxq.cc',
+    output: path.join(await mkdtemp(path.join(tmpdir(), 'snxq-content-')), 'content'),
+    generatedAt,
+    fetchImpl: async () => new Response(JSON.stringify(issues), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    }),
+    assetFetchImpl: async () => new Response('not png', {
+      status: 200, headers: { 'content-type': 'text/plain' }
+    })
+  }), error => {
+    assert.equal(error instanceof ContentValidationError, true);
+    assert.equal(error.entries[0].field, 'WeChat QR Code URL');
+    return true;
+  });
 });
 test('preserves previous output directory when validation fails before replacement', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'snxq-content-'));
