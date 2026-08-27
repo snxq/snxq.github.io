@@ -32,6 +32,6 @@ export const FORM_FIELDS = Object.freeze({
   bookmarks: ['URL', 'Description', 'Group'],
   uses: ['Description', 'Category', 'URL'],
   opensource: ['Year', 'Description', 'Tags', 'URL'],
-  about: ['Display Name', 'Role', 'Bio', 'Location', 'Status', 'Fields', 'Links'],
+  about: ['Display Name', 'Role', 'Bio', 'Location', 'Status', 'Fields', 'Links', 'WeChat QR Code URL'],
   now: ['Summary', 'BUILD', 'LEARN', 'READ', 'LOOP']
 });

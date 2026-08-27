@@ -39,3 +39,8 @@ body:
     attributes:
       label: Links
       description: One Label | URL entry per line.
+  - type: input
+    id: wechat-qr-code-url
+    attributes:
+      label: WeChat QR Code URL
+      description: HTTPS image URL for the 深夜旅行 official account QR code.
