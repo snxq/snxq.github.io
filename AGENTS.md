@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides operational guidance for Claude Code when working in this repository.
+This file provides operational guidance for AI agents working in this repository.
 
 ## Project overview
 
@@ -59,6 +59,8 @@ Fixture data under `tests/fixtures/` exists only for deterministic development a
 - `scripts/content/build-content.js` serializes each canonical section document, hashes those exact bytes with SHA-256, writes immutable `<section>.<hash>.json` files, points the manifest to them, and atomically replaces `generated/content/` only after validation.
 - `src/content-api.js` loads the same-origin manifest and section JSON while preserving the overview/detail window contract consumed by `src/app.js`.
 - `src/render-contract.js` validates generated content at the rendering boundary.
+- `scripts/build-feed.js` builds `feed.xml` from the published Posts document: entry `id` stays the stable Issue URL while entry `link` points at the public permalink `https://blog.snxq.cc/?post=issue-<number>` — never at the GitHub Issue URL, which is inaccessible to anyone but the owner.
+- `src/app.js` auto-opens the post detail window when the page loads with a `?post=` query matching `issue-<number>`; malformed or unknown IDs fall back to the normal command view.
 - `scripts/build-site.js` creates `dist/`; `scripts/check-static-site.js` reads the version 1 manifest and verifies every referenced immutable section file.
 - `.github/workflows/content-deploy.yml` uses fixture content for Pull Requests and real Issue content for production events, comments on affected Issues after validation failure, and deploys only validated `dist/` output.
 

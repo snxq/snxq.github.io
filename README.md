@@ -75,3 +75,4 @@ npm run content:build
 - `src/content-api.js` 从同源静态 JSON 加载已发布内容，并保持 UI 使用的命令和窗口响应契约。
 - `scripts/build-site.js` 将前端和已验证内容复制到 `dist/`。
 - `src/app.js` 使用 DOM API 安全渲染内容。访客运行时不需要 GitHub 凭据，也不会请求 `api.github.com`。
+- `scripts/build-feed.js` 生成 `feed.xml`：条目 `id` 保留稳定的 Issue URL，条目 `link` 指向公开 permalink `https://blog.snxq.cc/?post=issue-<编号>`（站内文章直链），不指向访客无法访问的 GitHub Issue 页面。

@@ -351,3 +351,17 @@ elements.layer.addEventListener('mousedown', event => { if (event.target === ele
 function tickClock() { elements.clock.textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date()); }
 tickClock(); setInterval(tickClock, 1000);
 setTimeout(() => elements.input.focus(), 700);
+
+function postLinkId() {
+  const value = new URL(window.location.href).searchParams.get('post');
+  return /^issue-\d+$/u.test(value ?? '') ? value : null;
+}
+
+async function openPostLink() {
+  const postId = postLinkId();
+  if (!postId) return;
+  await submitInput('posts');
+  if (state.window?.contentType === 'posts') await openDetail('posts', postId);
+}
+
+openPostLink();

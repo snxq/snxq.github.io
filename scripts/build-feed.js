@@ -78,7 +78,7 @@ export function renderBlocks(blocks) {
 const atomEntry = post => `  <entry>
     <id>${escapeXml(post.source.issueUrl)}</id>
     <title>${escapeXml(post.title)}</title>
-    <link href="${escapeXml(post.source.issueUrl)}"></link>
+    <link href="${escapeXml(`${SITE_URL}?post=${encodeURIComponent(post.id)}`)}"></link>
     <published>${escapeXml(calendarDateSchema.parse(post.date))}T00:00:00Z</published>
     <updated>${escapeXml(post.source.updatedAt)}</updated>
     <content type="html">${escapeXml(renderBlocks(post.detail))}</content>

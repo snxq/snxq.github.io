@@ -108,7 +108,7 @@ async function validateFeed(outputDirectory) {
     && xml.includes('<link rel="self" type="application/atom+xml" href="https://blog.snxq.cc/feed.xml"></link>')
     && [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gu)].every(([, entry]) =>
       /<id>https:\/\/github\.com\/[^<]+<\/id>/u.test(entry)
-      && /<link href="https:\/\/github\.com\/[^"]+"><\/link>/u.test(entry)
+      && /<link href="https:\/\/blog\.snxq\.cc\/\?post=issue-\d+"><\/link>/u.test(entry)
       && /<published>\d{4}-\d{2}-\d{2}T00:00:00Z<\/published>/u.test(entry)
       && /<updated>[^<]+Z<\/updated>/u.test(entry)
       && /<content type="html">[\s\S]*<\/content>/u.test(entry)

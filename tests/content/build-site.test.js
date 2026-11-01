@@ -128,7 +128,7 @@ test('renderBlocks serializes supported rich content with escaped values', () =>
   assert.match(html, /<hr>/);
 });
 
-test('createAtomXml uses Issue links, RFC 3339 dates, and XML-escaped complete HTML', () => {
+test('createAtomXml links to public permalinks, keeps Issue ids, and uses RFC 3339 dates', () => {
   const xml = createAtomXml({
     version: 1,
     section: 'posts',
@@ -156,6 +156,8 @@ test('createAtomXml uses Issue links, RFC 3339 dates, and XML-escaped complete H
   assert.match(xml, /<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/);
   assert.match(xml, /<link rel="self" type="application\/atom\+xml" href="https:\/\/blog\.snxq\.cc\/feed\.xml">/);
   assert.match(xml, /<id>https:\/\/github\.com\/snxq\/snxq\.github\.io\/issues\/42<\/id>/);
+  assert.match(xml, /<link href="https:\/\/blog\.snxq\.cc\/\?post=issue-42"><\/link>/);
+  assert.doesNotMatch(xml, /<link href="https:\/\/github\.com/);
   assert.match(xml, /<published>2026-08-20T00:00:00Z<\/published>/);
   assert.match(xml, /<updated>2026-08-21T02:00:00\.000Z<\/updated>/);
   assert.match(xml, /<title>A &lt; B<\/title>/);
@@ -403,6 +405,7 @@ test('buildStaticSite generates a feed from the published Posts document', async
   assert.match(xml, /<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/);
   for (const post of posts.data.items) {
     assert.match(xml, new RegExp(`<id>${post.source.issueUrl.replaceAll('.', '\\.')}<\\/id>`));
+    assert.match(xml, new RegExp(`<link href="https:\\/\\/blog\\.snxq\\.cc\\/\\?post=${post.id.replaceAll('.', '\\.')}"><\\/link>`));
   }
   assert.equal((xml.match(/<entry>/g) ?? []).length, posts.data.items.length);
 });
